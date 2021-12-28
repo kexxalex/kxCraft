@@ -143,7 +143,7 @@ int main() {
     DIFFUSE->Bind();
 
     constexpr int thread_count = 2;
-    World world({0, 0, 0}, 255, 24, thread_count);
+    World world({0, 0, 0}, 255, 12, thread_count);
     std::thread worldUpdater[thread_count];
 
     PLAYER = Player(&world, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
