@@ -7,24 +7,27 @@
 
 
 
-#include <iostream>
-#include "World.hpp"
-#include "ShaderManager.hpp"
-#include "TextureManager.h"
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/ext.hpp>
 #include <thread>
+#include <iostream>
+#include "World.hpp"
+#include "Player.h"
+#include "ShaderManager.hpp"
+#include "TextureManager.h"
+
 
 static GLFWwindow *WINDOW = nullptr;
 static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
+static Player PLAYER;
 static int WIDTH = 1280;
 static int HEIGHT = 720;
 static constexpr double MOUSE_SPEED = 0.1;
-static glm::fvec3 EYE(0.0f, 224.0f, 0.0f);
-static glm::fvec3 DIR(0.0f, -0.5f, 1.0f);
+//static glm::fvec3 EYE(0.0f, 224.0f, 0.0f);
+//static glm::fvec3 DIR(0.0f, -0.5f, 1.0f);
 static glm::dvec2 ANGLE(0.0, 0.0);
 
 
@@ -70,22 +73,10 @@ bool initGLWindow() {
 void worldUpdaterThread(int thrID, World *world_ptr) {
     World &world = *world_ptr;
     while (world.isActive()) {
-        world.update(thrID, &EYE, &DIR);
+        world.update(thrID);
     }
 }
 
-void handleMovement(const World& world, const double &dTime) {
-    auto rotX = glm::rotate(glm::mat4x4(1), glm::radians((float)ANGLE.y), glm::fvec3(1, 0, 0));
-    auto rotY = glm::rotate(glm::mat4x4(1), glm::radians((float)ANGLE.x), glm::fvec3(0, -1, 0));
-    DIR = (rotY*rotX * glm::fvec4(0,0,1,0));
-
-    if (glfwGetKey(WINDOW, GLFW_KEY_W)) {
-        EYE += DIR * (float)dTime * (float)C_EXTEND;
-    }
-    if (glfwGetKey(WINDOW, GLFW_KEY_S)) {
-        EYE -= DIR * (float)dTime * (float)C_EXTEND;
-    }
-}
 
 void render(World &world) {
     static double lastFPS = glfwGetTime();
@@ -106,12 +97,13 @@ void render(World &world) {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    handleMovement(world, dTime);
-    glm::fmat4x4 view = glm::lookAt(EYE, EYE + DIR, up);
+    PLAYER.update(WINDOW, time, dTime);
+    glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
     shader->setMatrixFloat4("MVP", MVP);
 
-    world.render(EYE, DIR);
+
+    world.render();
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -122,7 +114,7 @@ void render(World &world) {
         lastFPS = time;
     }
 
-    glfwSwapInterval(0);
+    glfwSwapInterval(1);
 }
 
 int main() {
@@ -158,12 +150,14 @@ int main() {
     World world({0, 0, 0}, 255, 8, thread_count);
     std::thread worldUpdater[thread_count];
 
+    PLAYER = Player(&world, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
+
     for (int i = 0; i < thread_count; i++) {
         worldUpdater[i] = std::thread(worldUpdaterThread, i, &world);
     }
 
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    glfwSetCursorPos(WINDOW, WIDTH*0.5, HEIGHT*0.5);
+    glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
 
     while (!glfwWindowShouldClose(WINDOW)) {
         render(world);

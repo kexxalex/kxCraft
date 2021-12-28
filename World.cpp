@@ -19,9 +19,9 @@ World::World(const glm::fvec3 &start_position, int seed, int renderDistance, int
     chunks.reserve((2*renderDistance+1) * (2*renderDistance+1));
 }
 
-void World::update(int threadID, glm::fvec3 *position_ptr, glm::fvec3 *direction_ptr) {
-    glm::fvec3 position = *position_ptr;
-    glm::fvec3 direction = *direction_ptr;
+void World::update(int threadID) {
+    glm::fvec3 position = playerPosition;
+    glm::fvec3 direction = playerDirection;
 
     glm::ivec2 chunkPos = glm::ivec2(
             glm::floor(position.x / C_EXTEND),
@@ -30,14 +30,13 @@ void World::update(int threadID, glm::fvec3 *position_ptr, glm::fvec3 *direction
 
     if (threadID == 0)
         addChunk(chunkPos, chunkPos, direction);
-    for (int r = 1 + threadID; r <= renderDistance && glm::dot(direction, *direction_ptr) > 0.8; r += threadCount)
-    {
+    for (int r = 1 + threadID; r <= renderDistance && glm::dot(direction, playerDirection) > 0.8; r += threadCount) {
         // add rectangular edge chunks with 'radius' r
         addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y}, direction);
         addChunk(chunkPos, {chunkPos.x - r * C_EXTEND, chunkPos.y}, direction);
         addChunk(chunkPos, {chunkPos.x, chunkPos.y + r * C_EXTEND}, direction);
         addChunk(chunkPos, {chunkPos.x, chunkPos.y - r * C_EXTEND}, direction);
-        for (int s = 1; s <= r && glm::dot(direction, *direction_ptr) > 0.95; s++) {
+        for (int s = 1; s <= r && glm::dot(direction, playerDirection) > 0.95; s++) {
             addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y + s * C_EXTEND}, direction);
             addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y - s * C_EXTEND}, direction);
 
@@ -99,10 +98,10 @@ void World::update(int threadID, glm::fvec3 *position_ptr, glm::fvec3 *direction
     }
 }
 
-void World::render(const glm::fvec3 &position, const glm::fvec3 &direction) {
+void World::render() {
     glm::ivec2 chunkPos = glm::ivec2(
-            glm::floor(position.x / C_EXTEND),
-            glm::floor(position.z / C_EXTEND)
+            glm::floor(playerPosition.x / C_EXTEND),
+            glm::floor(playerPosition.z / C_EXTEND)
     ) * C_EXTEND;
 
     static std::vector<glm::ivec2> rmChunks(CHANGE_CHUNK_MAX);
@@ -116,8 +115,9 @@ void World::render(const glm::fvec3 &position, const glm::fvec3 &direction) {
             rmChunks.push_back(chunk.first);
         }
 
-        glm::fvec2 sideA = glm::fvec2(direction.x, direction.z);
-        glm::fvec2 sideB = glm::fvec2(chunk.first - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 2.0f * sideA * (float) C_EXTEND;
+        glm::fvec2 sideA = glm::fvec2(playerDirection.x, playerDirection.z);
+        glm::fvec2 sideB =
+                glm::fvec2(chunk.first - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 2.0f * sideA * (float) C_EXTEND;
         float angle = glm::dot(sideA, sideB);
 
         if (angle > glm::cos(45.0f) * glm::length(sideA) * glm::length(sideB)) { // || angle < glm::cos(65.0f * 0.5f))

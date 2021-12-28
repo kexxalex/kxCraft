@@ -28,27 +28,39 @@ public:
 
     ~World();
 
-    void update(int threadID, glm::fvec3 *position, glm::fvec3 *direction);
-    void render(const glm::fvec3 &position, const glm::fvec3 &direction);
+    void update(int threadID);
+
+    inline void setPlayer(const glm::fvec3 &position, const glm::fvec3 &direction) {
+        playerPosition = position;
+        playerDirection = direction;
+    }
+
+    void render();
+
     void setInactive() { m_active = false; }
 
-    const st_block& getBlock(float x, float y, float z) const {
+    const st_block &getBlock(float x, float y, float z) const {
         const glm::ivec2 chunkPos = glm::ivec2(
                 glm::floor(x / C_EXTEND),
                 glm::floor(z / C_EXTEND)
         ) * C_EXTEND;
         glm::ivec2 inner = glm::ivec2(x, z) - chunkPos;
         return (y < 0 || y >= C_HEIGHT || chunks.find(chunkPos) == chunks.end()) ?
-            AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int)y, inner.y);
+               AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
     };
 
     [[nodiscard]] inline bool isActive() const { return m_active; }
 
 private:
     void addChunk(const glm::ivec2 &chunkPos, const glm::ivec2 &position, const glm::fvec3 &direction);
+
     bool m_active{true};
-    int renderDistance{ 6 };
-    int threadCount{ 1 };
+    int renderDistance{6};
+    int threadCount{1};
+
+    glm::fvec3 playerPosition{0, 0, 0};
+    glm::fvec3 playerDirection{0, 0, 1};
+
     WorldGenerator worldGenerator;
     std::mutex chunkLock;
     std::unordered_map<const glm::ivec2, Chunk, hash_iVec2> chunks;
