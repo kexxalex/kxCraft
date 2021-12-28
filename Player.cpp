@@ -5,6 +5,7 @@
 #include "Player.h"
 #include <glm/ext.hpp>
 
+static constexpr double MOUSE_SPEED = 0.1;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
         : position(position), bbox(bbox), world(world) {
@@ -12,18 +13,23 @@ Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
 }
 
 void Player::update(GLFWwindow *window, const double &time, const double &dTime) {
+
+    glm::dvec2 mouse;
+
     velocity = {0, 0, 0};
+    double angle = glm::radians(cameraAngle.x);
+
     if (glfwGetKey(window, GLFW_KEY_W)) {
-        velocity += glm::fvec3(glm::sin(cameraAngle.x), 0, glm::cos(cameraAngle.y));
-    }
-    if (glfwGetKey(window, GLFW_KEY_D)) {
-        velocity += glm::fvec3(-glm::cos(cameraAngle.x), 0, glm::sin(cameraAngle.y));
+        velocity += glm::fvec3(-glm::sin(angle), 0, glm::cos(angle));
     }
     if (glfwGetKey(window, GLFW_KEY_A)) {
-        velocity += glm::fvec3(glm::cos(cameraAngle.x), 0, -glm::sin(cameraAngle.y));
+        velocity += glm::fvec3(glm::cos(angle), 0, glm::sin(angle));
+    }
+    if (glfwGetKey(window, GLFW_KEY_D)) {
+        velocity -= glm::fvec3(glm::cos(angle), 0, glm::sin(angle));
     }
     if (glfwGetKey(window, GLFW_KEY_S)) {
-        velocity -= glm::fvec3(glm::sin(cameraAngle.x), 0, glm::cos(cameraAngle.y));
+        velocity += glm::fvec3(glm::sin(angle), 0, -glm::cos(angle));
     }
     if (glfwGetKey(window, GLFW_KEY_SPACE)) {
         position.y += (float) dTime * C_EXTEND;
@@ -40,6 +46,11 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
         position += glm::normalize(velocity) * (static_cast<float>(dTime) * C_EXTEND);
 
     world->setPlayer(position, direction);
+}
+
+void Player::addAngle(const glm::dvec2 &angle) {
+    cameraAngle += angle * MOUSE_SPEED;
+    cameraAngle.y = glm::clamp(cameraAngle.y, -90.0, 85.0);
 }
 
 

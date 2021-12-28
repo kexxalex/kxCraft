@@ -30,13 +30,13 @@ void World::update(int threadID) {
 
     if (threadID == 0)
         addChunk(chunkPos, chunkPos, direction);
-    for (int r = 1 + threadID; r <= renderDistance && glm::dot(direction, playerDirection) > 0.8; r += threadCount) {
+    for (int r = 1 + threadID; r <= renderDistance; r += threadCount) {
         // add rectangular edge chunks with 'radius' r
         addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y}, direction);
         addChunk(chunkPos, {chunkPos.x - r * C_EXTEND, chunkPos.y}, direction);
         addChunk(chunkPos, {chunkPos.x, chunkPos.y + r * C_EXTEND}, direction);
         addChunk(chunkPos, {chunkPos.x, chunkPos.y - r * C_EXTEND}, direction);
-        for (int s = 1; s <= r && glm::dot(direction, playerDirection) > 0.95; s++) {
+        for (int s = 1; s <= r; s++) {
             addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y + s * C_EXTEND}, direction);
             addChunk(chunkPos, {chunkPos.x + r * C_EXTEND, chunkPos.y - s * C_EXTEND}, direction);
 
@@ -92,8 +92,9 @@ void World::update(int threadID) {
                 hasChanges = true;
             }
 
-            if (hasChanges || c.needUpdate())
+            if (hasChanges || c.needUpdate()) {
                 c.update();
+            }
         }
     }
 }

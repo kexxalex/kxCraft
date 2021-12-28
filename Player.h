@@ -16,6 +16,8 @@ public:
 
     Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox);
 
+    void addAngle(const glm::dvec2 &angle);
+
     void update(GLFWwindow *window, const double &time, const double &dTime);
 
     [[nodiscard]] inline const glm::fvec3 &getPosition() const noexcept {

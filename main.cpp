@@ -25,10 +25,6 @@ static TextureManager TEXTURE_MANAGER;
 static Player PLAYER;
 static int WIDTH = 1280;
 static int HEIGHT = 720;
-static constexpr double MOUSE_SPEED = 0.1;
-//static glm::fvec3 EYE(0.0f, 224.0f, 0.0f);
-//static glm::fvec3 DIR(0.0f, -0.5f, 1.0f);
-static glm::dvec2 ANGLE(0.0, 0.0);
 
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -146,8 +142,8 @@ int main() {
     glActiveTexture(GL_TEXTURE0);
     DIFFUSE->Bind();
 
-    constexpr int thread_count = 4;
-    World world({0, 0, 0}, 255, 8, thread_count);
+    constexpr int thread_count = 2;
+    World world({0, 0, 0}, 255, 24, thread_count);
     std::thread worldUpdater[thread_count];
 
     PLAYER = Player(&world, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
@@ -165,9 +161,8 @@ int main() {
 
         glm::dvec2 mouse;
         glfwGetCursorPos(WINDOW, &mouse.x, &mouse.y);
-        glfwSetCursorPos(WINDOW, WIDTH*0.5, HEIGHT*0.5);
-        ANGLE += (mouse - glm::dvec2{WIDTH*0.5, HEIGHT*0.5}) * MOUSE_SPEED;
-        ANGLE.y = glm::clamp(ANGLE.y, -90.0, 85.0);
+        glfwSetCursorPos(WINDOW, WIDTH / 2, HEIGHT / 2);
+        PLAYER.addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
     }
     world.setInactive();
     for (std::thread &thread : worldUpdater) {

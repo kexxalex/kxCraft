@@ -17,6 +17,7 @@ Chunk::Chunk(WorldGenerator *worldGenerator, int x, int z)
 }
 
 Chunk::~Chunk() {
+    vertexLock.lock();
     if (!m_generated)
         return;
     // std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
