@@ -22,11 +22,11 @@
 static GLFWwindow *WINDOW = nullptr;
 static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
-static Player PLAYER;
-static int WIDTH = 1280;
-static int HEIGHT = 720;
-static World WORLD;
+static int WIDTH = 1600;
+static int HEIGHT = 900;
 static bool VSYNC = true;
+static World WORLD;
+static Player PLAYER;
 
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -50,8 +50,8 @@ void window_size_callback(GLFWwindow* window, int width, int height)
 }
 
 bool initGLWindow() {
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
@@ -153,7 +153,7 @@ int main() {
     DIFFUSE->Bind();
 
     constexpr int thread_count = 1;
-    WORLD = World({0, 0, 0}, 255, 16, thread_count);
+    WORLD = World({0, 0, 0}, 255, 12, thread_count);
     std::thread worldUpdater[thread_count];
 
     PLAYER = Player(&WORLD, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});

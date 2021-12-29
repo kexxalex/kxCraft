@@ -51,18 +51,15 @@ Chunk::~Chunk() {
 }
 
 void Chunk::generate() {
-    if (chunkDestructionLock.try_lock()) {
-        for (int z = 0; z < C_EXTEND; z++) {
-            for (int x = 0; x < C_EXTEND; x++) {
-                m_worldGenerator->placeStack(
-                        x + (int) m_position.x, z + (int) m_position.z,
-                        &m_blocks[linearizeCoord(x, 0, z)]);
-            }
+    for (int z = 0; z < C_EXTEND; z++) {
+        for (int x = 0; x < C_EXTEND; x++) {
+            m_worldGenerator->placeStack(
+                    x + (int) m_position.x, z + (int) m_position.z,
+                    &m_blocks[linearizeCoord(x, 0, z)]);
         }
-        fillSunlight();
-        m_generated = true;
-        chunkDestructionLock.unlock();
     }
+    fillSunlight();
+    m_generated = true;
 }
 
 st_block& Chunk::getBlockRef(int x, int y, int z) {

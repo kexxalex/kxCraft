@@ -56,7 +56,7 @@ WorldGenerator &WorldGenerator::operator=(const WorldGenerator &wg) {
 void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
     double mNoise = mountainNoise.GetValue(x, z, 0.0);
     double mountains = terrace(
-            glm::clamp(mNoise * 1.2 + 0.3, 0.0, 1.0),
+            glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
             6);
     int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains)
             + 3 * meadowNoise.GetValue(x, z, 0.0)

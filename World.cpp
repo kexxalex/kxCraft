@@ -41,7 +41,7 @@ void World::update(int threadID) {
 
                    +
     */
-    for (int r = 1 + threadID; r <= renderDistance; r += threadCount) {
+    for (int r = 1 + threadID; r <= renderDistance && glm::dot(direction, playerDirection) > 0.98f; r += threadCount) {
         // center of each edge
         addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y});
         addChunk({chunkPos.x - r * C_EXTEND, chunkPos.y});
@@ -58,7 +58,7 @@ void World::update(int threadID) {
                        |
                 +   <--+-->   +
         */
-        for (int s = 1; s <= r; s++) {
+        for (int s = 1; s <= r && glm::dot(direction, playerDirection) > 0.98f; s++) {
             addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y + s * C_EXTEND});
             addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y - s * C_EXTEND});
 
@@ -76,6 +76,9 @@ void World::update(int threadID) {
     }
 
     for (auto& chunk : chunks) {
+        if (glm::dot(direction, playerDirection) < 0.95)
+            break;
+
         Chunk &c = chunk.second;
         const glm::ivec2 north = c.getXZPosition() + glm::ivec2(0, C_EXTEND);
         const glm::ivec2 east = c.getXZPosition() + glm::ivec2(C_EXTEND, 0);
@@ -123,6 +126,7 @@ void World::addChunk(const glm::ivec2 &position) {
         chunkLock.unlock();
 
         chunks[position].generate();
+        chunks[position].update();
     }
 }
 
