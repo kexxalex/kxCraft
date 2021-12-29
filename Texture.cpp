@@ -26,6 +26,7 @@ Texture::Texture(unsigned int ID, const char *data,
             internalFormat = GL_RGB8;
     }
 
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 

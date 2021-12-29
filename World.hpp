@@ -24,7 +24,17 @@ struct hash_iVec2 {
 
 class World {
 public:
+    World() = default;
     World(const glm::fvec3 &start_position, int seed, int renderDistance = 4, int threadCount = 2);
+
+    World& operator=(const World& world) {
+        renderDistance = world.renderDistance;
+        threadCount = world.threadCount;
+        worldGenerator = world.worldGenerator;
+        chunks.reserve((2*renderDistance+1) * (2*renderDistance+1));
+
+        return *this;
+    }
 
     ~World();
 
@@ -49,10 +59,20 @@ public:
                AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
     };
 
+    inline void reloadCurrentChunk() {
+        const glm::ivec2 chunkPos = glm::ivec2(
+                glm::floor(playerPosition.x / C_EXTEND),
+                glm::floor(playerPosition.z / C_EXTEND)
+        ) * C_EXTEND;
+        if (chunks.find(chunkPos) != chunks.end())
+            chunks[chunkPos].update();
+    }
+
+    [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }
 
 private:
-    void addChunk(const glm::ivec2 &chunkPos, const glm::ivec2 &position, const glm::fvec3 &direction);
+    void addChunk(const glm::ivec2 &position);
 
     bool m_active{true};
     int renderDistance{6};

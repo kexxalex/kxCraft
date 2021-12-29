@@ -10,6 +10,7 @@ uniform mat4 MVP;
 smooth out vec3 fNormal;
 smooth out vec2 fFace;
 smooth out vec2 fUV;
+smooth out vec3 fragPosition;
 flat out vec4 fLight;
 
 void main() {
@@ -23,21 +24,25 @@ void main() {
     fLight = vec4(gLight[0], gLight[1], gLight[2], gTexture[1]);
 
     gl_Position = MVP * vec4(pos, 1.0);
+    fragPosition = pos;
     fUV = uv;
     fFace = vec2(0, 0);
     EmitVertex();
 
     gl_Position = MVP * vec4(pos + edgeA, 1.0);
+    fragPosition = pos + edgeA;
     fUV = uv + vec2(0.0625f, 0.0f);
     fFace = vec2(1, 0);
     EmitVertex();
 
     gl_Position = MVP * vec4(pos + edgeB, 1.0);
+    fragPosition = pos + edgeB;
     fUV = uv + vec2(0.0f, 0.0625f);
     fFace = vec2(0, 1);
     EmitVertex();
 
     gl_Position = MVP * vec4(pos + edgeA + edgeB, 1.0);
+    fragPosition = pos + edgeA + edgeB;
     fUV = uv + vec2(0.0625f, 0.0625f);
     fFace = vec2(1, 1);
     EmitVertex();

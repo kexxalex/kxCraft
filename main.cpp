@@ -25,11 +25,21 @@ static TextureManager TEXTURE_MANAGER;
 static Player PLAYER;
 static int WIDTH = 1280;
 static int HEIGHT = 720;
+static World WORLD;
+static bool VSYNC = true;
 
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
-    if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+    if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
         SHADER_MANAGER.reloadAll();
+        Shader* shader = SHADER_MANAGER.getDefault().get();
+        shader->Bind();
+        shader->setInt("DIFFUSE", 0);
+        shader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+    }
+    if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
+        WORLD.reloadCurrentChunk();
+    }
 }
 
 void window_size_callback(GLFWwindow* window, int width, int height)
@@ -40,8 +50,8 @@ void window_size_callback(GLFWwindow* window, int width, int height)
 }
 
 bool initGLWindow() {
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 4);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
@@ -66,22 +76,21 @@ bool initGLWindow() {
     return true;
 }
 
-void worldUpdaterThread(int thrID, World *world_ptr) {
-    World &world = *world_ptr;
-    while (world.isActive()) {
-        world.update(thrID);
+void worldUpdaterThread(int thrID) {
+    while (WORLD.isActive()) {
+        WORLD.update(thrID);
     }
 }
 
 
-void render(World &world) {
+void render() {
     static double lastFPS = glfwGetTime();
     static int frames{0};
     static glm::fvec3 up(0, 1, 0);
     static glm::fmat4x4 proj = glm::perspective(
             glm::radians(65.0f),
             1.0f * WIDTH / HEIGHT,
-            0.03f, 2048.0f);
+            0.03f, 1024.0f);
 
     static Shader *shader = SHADER_MANAGER.getDefault().get();
     shader->Bind();
@@ -97,9 +106,10 @@ void render(World &world) {
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
     shader->setMatrixFloat4("MVP", MVP);
+    shader->setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
+    shader->setFloat("TIME", (float)time);
 
-
-    world.render();
+    WORLD.render();
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -110,7 +120,7 @@ void render(World &world) {
         lastFPS = time;
     }
 
-    glfwSwapInterval(1);
+    glfwSwapInterval(VSYNC);
 }
 
 int main() {
@@ -125,7 +135,7 @@ int main() {
 
     std::cout << "OpenGL " << glGetString(GL_VERSION) << std::endl;
 
-    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClearColor(0.8, 0.95, 1.0, 1.0);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
@@ -142,21 +152,22 @@ int main() {
     glActiveTexture(GL_TEXTURE0);
     DIFFUSE->Bind();
 
-    constexpr int thread_count = 2;
-    World world({0, 0, 0}, 255, 12, thread_count);
+    constexpr int thread_count = 1;
+    WORLD = World({0, 0, 0}, 255, 16, thread_count);
     std::thread worldUpdater[thread_count];
 
-    PLAYER = Player(&world, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
+    PLAYER = Player(&WORLD, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
+    shader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
 
     for (int i = 0; i < thread_count; i++) {
-        worldUpdater[i] = std::thread(worldUpdaterThread, i, &world);
+        worldUpdater[i] = std::thread(worldUpdaterThread, i);
     }
 
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
 
     while (!glfwWindowShouldClose(WINDOW)) {
-        render(world);
+        render();
         glfwPollEvents();
 
         glm::dvec2 mouse;
@@ -164,7 +175,7 @@ int main() {
         glfwSetCursorPos(WINDOW, WIDTH / 2, HEIGHT / 2);
         PLAYER.addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
     }
-    world.setInactive();
+    WORLD.setInactive();
     for (std::thread &thread : worldUpdater) {
         if (thread.joinable())
             thread.join();

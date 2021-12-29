@@ -16,14 +16,18 @@ static constexpr unsigned char MAX_SUN_LIGHT = 16;
 
 struct st_block {
     short block{ 0 };
-    unsigned char sunLight{ MAX_SUN_LIGHT };
+    unsigned char sunLight{ 0 };
     unsigned char torchLight{ 0 };
 
+    [[nodiscard]] inline short getSunLight() const {
+        return (sunLight == 255) ? 0 : sunLight;
+    }
+
     [[nodiscard]] inline short getLight() const {
-        return sunLight > torchLight ? sunLight : torchLight;
+        return (sunLight != 255 && sunLight > torchLight) ? sunLight : torchLight;
     }
 };
-static constexpr st_block AIR_BLOCK{ 0, 0, 0 };
+static st_block AIR_BLOCK{ 0, 255, 0 };
 
 inline int linearizeCoord(int x, int y, int z) {
     return (z * C_EXTEND + x) * C_HEIGHT + y;
@@ -32,11 +36,32 @@ inline int linearizeCoord(int x, int y, int z) {
 
 class WorldGenerator {
 public:
-    WorldGenerator(int seed);
+    WorldGenerator() = default;
+    explicit WorldGenerator(int seed);
+
+    WorldGenerator& operator=(const WorldGenerator& wg) {
+        mountainNoise.SetSeed(wg.mountainNoise.GetSeed());
+        mountainNoise.SetOctaveCount(wg.mountainNoise.GetOctaveCount());
+        mountainNoise.SetNoiseQuality(wg.mountainNoise.GetNoiseQuality());
+        mountainNoise.SetFrequency(wg.mountainNoise.GetFrequency());
+
+        meadowNoise.SetSeed(wg.meadowNoise.GetSeed());
+        meadowNoise.SetOctaveCount(wg.meadowNoise.GetOctaveCount());
+        meadowNoise.SetNoiseQuality(wg.meadowNoise.GetNoiseQuality());
+        meadowNoise.SetFrequency(wg.meadowNoise.GetFrequency());
+
+        caveNoise.SetSeed(wg.caveNoise.GetSeed());
+        caveNoise.SetOctaveCount(wg.caveNoise.GetOctaveCount());
+        caveNoise.SetNoiseQuality(wg.caveNoise.GetNoiseQuality());
+        caveNoise.SetFrequency(wg.caveNoise.GetFrequency());
+
+        return *this;
+    }
 
     void placeStack(int x, int z, st_block * stack) const;
 
 private:
-    noise::module::Perlin mountain_noise;
-    noise::module::Perlin meadow_noise;
+    noise::module::Billow mountainNoise;
+    noise::module::Perlin meadowNoise;
+    noise::module::Perlin caveNoise;
 };
