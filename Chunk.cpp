@@ -27,7 +27,7 @@ Chunk::~Chunk() {
     chunkDestructionLock.lock();
     if (!m_generated)
         return;
-    std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
+    // std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();

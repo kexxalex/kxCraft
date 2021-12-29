@@ -2,6 +2,7 @@
 layout(location = 0) out vec3 outFragColor;
 
 uniform sampler2D DIFFUSE;
+
 uniform float INV_RENDER_DIST;
 uniform float TIME;
 uniform vec3 PLAYER_POSITION;
@@ -26,7 +27,7 @@ void main() {
     ) * 0.015625f;
 
     // Directional sun light
-    vec3 lightDirection = vec3(sin(TIME * 0.125f), cos(TIME * 0.125f), 0.0f);
+    vec3 lightDirection = normalize(vec3(0.75, -1.0, 0.25)); //vec3(sin(TIME * 0.125f), cos(TIME * 0.125f), 0.0f);
     float dLight = min(1.2f, max(0.0f, dot(-lightDirection, gNormal)) * 0.9f + 0.3f);
 
     // Ambient Light from occlusion

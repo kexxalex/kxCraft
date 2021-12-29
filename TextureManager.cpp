@@ -11,7 +11,7 @@ void TextureManager::initialize(unsigned int texture_count) {
     clear();
     m_free_ids = std::vector<unsigned int>(texture_count);
 
-    glGenTextures(texture_count, &m_free_ids[0]);
+    glCreateTextures(GL_TEXTURE_2D, texture_count, &m_free_ids[0]);
 }
 
 unsigned int TextureManager::getID(const std::shared_ptr<Texture> &texture) {

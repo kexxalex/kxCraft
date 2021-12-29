@@ -148,12 +148,10 @@ int main() {
     );
 
     shader->Bind();
-    shader->setInt("DIFFUSE", 0);
-    glActiveTexture(GL_TEXTURE0);
-    DIFFUSE->Bind();
+    DIFFUSE->BindTo(0);
 
     constexpr int thread_count = 1;
-    WORLD = World({0, 0, 0}, 255, 12, thread_count);
+    WORLD = World({0, 0, 0}, 255, 16, thread_count);
     std::thread worldUpdater[thread_count];
 
     PLAYER = Player(&WORLD, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
