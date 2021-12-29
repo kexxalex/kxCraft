@@ -24,25 +24,25 @@ class Block {
 public:
     Block() = default;
 
-    Block(const char *name, int texture, bool transparent = false, bool connect = false, RENDER_TYPE type=R_BLOCK)
-        : Block(name, texture, texture, texture, transparent, connect, type)
-    {}
+    Block(const char *name, int texture, bool transparent = false, bool collision = false, bool connect = false,
+          RENDER_TYPE type = R_BLOCK)
+            : Block(name, texture, texture, texture, transparent, collision, connect, type) {}
 
     Block(const char *name, int top, int bottom, int side,
-          bool transparent = false, bool connect = false, RENDER_TYPE type=R_BLOCK)
-          : Block(name, transparent, connect, top, bottom, side, side, side, side, type)
-    {}
+          bool transparent = false, bool collision = false, bool connect = false, RENDER_TYPE type = R_BLOCK)
+            : Block(name, transparent, collision, connect, top, bottom, side, side, side, side, type) {}
 
-    Block(const char *name, bool transparent, bool connect,
+    Block(const char *name, bool transparent, bool collision, bool connect,
           int top, int bottom, int north, int east, int south, int west,
           RENDER_TYPE type = R_BLOCK)
-        : name(name), transparent(transparent), connect(connect),
-        top(top - 1), bottom(bottom - 1), north(north - 1), east(east - 1), south(south - 1), west(west - 1),
-        type(type) {}
+            : name(name), transparent(transparent), connect(connect),
+              top(top - 1), bottom(bottom - 1), north(north - 1), east(east - 1), south(south - 1), west(west - 1),
+              type(type) {}
 
     const char *name{"Unnamed"};
     const bool transparent{false};
-    const bool connect{ false };
+    const bool collision{true};
+    const bool connect{false};
     const RENDER_TYPE type{ R_BLOCK };
 
     const unsigned char top{0};
@@ -55,8 +55,8 @@ public:
 
 
 static Block BLOCKS[]{
-        {"Air",         T_AIR,       true},
-        {"Grass",       T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, false, true},
+        {"Air",         T_AIR,       true,   false},
+        {"Grass",       T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, false, true, true},
         {"Stone",       T_STONE},
         {"Dirt",        T_DIRT},
         {"Wood Planks", T_WOOD_PLANKS},
