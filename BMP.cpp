@@ -1,13 +1,15 @@
-#include "BMP.h"
+#include "BMP.hpp"
 #include <fstream>
 
 static constexpr unsigned char BMP_CHECK[]{'B', 'M'};
 
 
-BMP::BMP(const char *n, bool &isOK) :
-        name(n) {
-    std::ifstream bmp_file(name, std::ios::binary);
+BMP::BMP(const char *n, bool &isOK)
+    : name(n)
+{
     isOK = false;
+
+    std::ifstream bmp_file(name, std::ios::binary);
     if (bmp_file) {
         bmp_file.read(reinterpret_cast<char *>(&header), 14);
 
@@ -30,9 +32,7 @@ BMP::BMP(const char *n, bool &isOK) :
     bmp_file.close();
 }
 
-BMP::~BMP() {
-    delete[] data;
-}
+BMP::~BMP() { delete[] data; }
 
 const char *BMP::getData() const noexcept {
     if (!isBitmap()) {

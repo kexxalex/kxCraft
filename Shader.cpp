@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-bool loadShaderProgram(const std::string &&filename, GLint shaderType, GLuint &shaderID) {
+bool loadShaderProgram(const std::string&& filename, GLint shaderType, GLuint &shaderID) {
     std::string sourceCode;
     std::ifstream shaderFile(filename);
 
@@ -16,7 +16,7 @@ bool loadShaderProgram(const std::string &&filename, GLint shaderType, GLuint &s
 
         sourceCode = sourceStringStream.str();
     } else {
-        std::cout << "[WARNING ][Shader ] Cannot open shader: " << filename << std::endl;
+        std::cout << "[WARNING ][Shader ] File does not exist: " << filename << std::endl;
         return false;
     }
 
@@ -26,13 +26,13 @@ bool loadShaderProgram(const std::string &&filename, GLint shaderType, GLuint &s
     const char *source_cptr = sourceCode.c_str();
 
     shaderID = glCreateShader(shaderType);
-    glShaderSource(shaderID, 1, &source_cptr, NULL);
+    glShaderSource(shaderID, 1, &source_cptr, nullptr);
     glCompileShader(shaderID);
 
     glGetShaderiv(shaderID, GL_COMPILE_STATUS, &success);
     if (!success) {
-        glGetShaderInfoLog(shaderID, 1024, NULL, infoLog);
-        std::cout << "[ ERROR  ][Shader ]\n" << infoLog << std::endl;
+        glGetShaderInfoLog(shaderID, 1024, nullptr, infoLog);
+        std::cout << "[ ERROR  ][Shader ] Error in: " << filename << std::endl << infoLog << std::endl;
         return false;
     }
 
@@ -40,8 +40,8 @@ bool loadShaderProgram(const std::string &&filename, GLint shaderType, GLuint &s
 }
 
 
-Shader::Shader(const char *shaderpath, bool &isOK)
-        : shaderName(shaderpath) {
+Shader::Shader(const char *shaderPath, bool &isOK)
+        : shaderName(shaderPath) {
     isOK = Load();
 }
 
@@ -59,21 +59,30 @@ bool Shader::Load() noexcept {
     std::cout << "[  INFO  ][Shader ] Create Shader: " << shaderName << std::endl;
 
     GLuint vertexID(0), fragmentID(0), geometryID(0);
-    if (!loadShaderProgram(shaderName + ".vs", GL_VERTEX_SHADER, vertexID))
-        return false;
-    if (!loadShaderProgram(shaderName + ".fs", GL_FRAGMENT_SHADER, fragmentID))
-        return false;
+    bool hasVertex   = loadShaderProgram(shaderName + ".vs", GL_VERTEX_SHADER, vertexID);
+    bool hasFragment = loadShaderProgram(shaderName + ".fs", GL_FRAGMENT_SHADER, fragmentID);
     bool hasGeometry = loadShaderProgram(shaderName + ".gs", GL_GEOMETRY_SHADER, geometryID);
 
+    // no shader source found
+    if (!hasVertex && !hasFragment && !hasGeometry)
+        return false;
+
+    // Create and Link the Shader Program, attach and delete available Shaders
     programID = glCreateProgram();
-    glAttachShader(programID, vertexID);
-    glAttachShader(programID, fragmentID);
+
+    if (hasVertex)
+        glAttachShader(programID, vertexID);
+    if (hasFragment)
+        glAttachShader(programID, fragmentID);
     if (hasGeometry)
         glAttachShader(programID, geometryID);
+
     glLinkProgram(programID);
 
-    glDeleteShader(vertexID);
-    glDeleteShader(fragmentID);
+    if (hasVertex)
+        glDeleteShader(vertexID);
+    if (hasFragment)
+        glDeleteShader(fragmentID);
     if (hasGeometry)
         glDeleteShader(geometryID);
 
@@ -81,8 +90,8 @@ bool Shader::Load() noexcept {
     char infoLog[1024];
     glGetProgramiv(programID, GL_LINK_STATUS, &success);
     if (!success) {
-        glGetProgramInfoLog(programID, 1024, NULL, infoLog);
-        std::cout << "[ ERROR  ][Shader ] Link:\n" << infoLog << std::endl;
+        glGetProgramInfoLog(programID, 1024, nullptr, infoLog);
+        std::cout << "[ ERROR  ][Shader ] Link:" << std::endl << infoLog << std::endl;
         return false;
     }
 

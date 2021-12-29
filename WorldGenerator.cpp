@@ -34,22 +34,45 @@ WorldGenerator::WorldGenerator(int seed) {
     caveNoise.SetFrequency(1.0 / 64.0);
 }
 
+WorldGenerator &WorldGenerator::operator=(const WorldGenerator &wg) {
+    mountainNoise.SetSeed(wg.mountainNoise.GetSeed());
+    mountainNoise.SetOctaveCount(wg.mountainNoise.GetOctaveCount());
+    mountainNoise.SetNoiseQuality(wg.mountainNoise.GetNoiseQuality());
+    mountainNoise.SetFrequency(wg.mountainNoise.GetFrequency());
+
+    meadowNoise.SetSeed(wg.meadowNoise.GetSeed());
+    meadowNoise.SetOctaveCount(wg.meadowNoise.GetOctaveCount());
+    meadowNoise.SetNoiseQuality(wg.meadowNoise.GetNoiseQuality());
+    meadowNoise.SetFrequency(wg.meadowNoise.GetFrequency());
+
+    caveNoise.SetSeed(wg.caveNoise.GetSeed());
+    caveNoise.SetOctaveCount(wg.caveNoise.GetOctaveCount());
+    caveNoise.SetNoiseQuality(wg.caveNoise.GetNoiseQuality());
+    caveNoise.SetFrequency(wg.caveNoise.GetFrequency());
+
+    return *this;
+}
+
 void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
+    double mNoise = mountainNoise.GetValue(x, z, 0.0);
     double mountains = terrace(
-            glm::clamp(mountainNoise.GetValue(x, z, 0.0) * 1.2 + 0.3, 0.0, 1.0),
+            glm::clamp(mNoise * 1.2 + 0.3, 0.0, 1.0),
             6);
-    int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains) + 3 * meadowNoise.GetValue(x, z, 0.0));
+    int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains)
+            + 3 * meadowNoise.GetValue(x, z, 0.0)
+            + 12 * mNoise
+    );
 
     for (int y = 0; y < height; y++) {
         if (caveNoise.GetValue(x, y * 1.5, z) < 0.8) {
-            stack[y].block = (y < height - 4) ? BLOCK_ID::STONE : BLOCK_ID::DIRT;
+            stack[y].ID = (y < height - 4) ? BLOCK_ID::STONE : BLOCK_ID::DIRT;
         }
-        stack[y].sunLight = 0;
+        //stack[y].sunLight = 0;
     }
 
     if (caveNoise.GetValue(x, height * 1.5, z) < 0.8) {
-        stack[height].block = BLOCK_ID::GRASS;
-        stack[height].sunLight = 0;
+        stack[height].ID = BLOCK_ID::GRASS;
+        //stack[height].sunLight = 0;
     }
 }
 

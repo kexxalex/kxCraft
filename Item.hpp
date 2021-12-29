@@ -10,5 +10,5 @@
 struct st_drop {
     unsigned short ID;
     unsigned short count;
-    st_drop *next{nullptr};
+    st_drop *next{ nullptr };
 };

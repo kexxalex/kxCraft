@@ -8,8 +8,8 @@ void ShaderManager::initialize() {
 
 std::shared_ptr<Shader> ShaderManager::getShader(const char *name) noexcept {
     if (shaderHash.find(name) == shaderHash.end()) {
-        bool isOK;
-        unsigned int id = (unsigned int) shaders.size();
+        bool isOK(false);
+        unsigned int id(shaders.size());
 
         shaders.emplace_back(std::make_shared<Shader>(name, isOK));
         shaderHash[name] = id;

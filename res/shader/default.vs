@@ -3,14 +3,11 @@
 layout(location=0) in vec3 aPosition;
 layout(location=1) in vec2 textureWithOcclusion;
 
-uniform mat4 MVP;
+out int vTexture;
+out int vLight;
 
-out int gTexture;
-out int gLight;
-
-void main()
-{
-    gTexture = int(textureWithOcclusion.x);
-    gLight = int(textureWithOcclusion.y);
+void main() {
+    vTexture = int(textureWithOcclusion.x);
+    vLight = int(textureWithOcclusion.y);
     gl_Position = vec4(aPosition, 1.0);
 }

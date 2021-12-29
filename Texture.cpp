@@ -1,5 +1,5 @@
 #include <GL/glew.h>
-#include "Texture.h"
+#include "Texture.hpp"
 
 Texture::Texture(unsigned int ID, const char *data,
                  int width, int height, unsigned bytesPerPixel,

@@ -34,20 +34,16 @@ public:
     Chunk(WorldGenerator *world_generator, int x, int z);
     ~Chunk();
 
-    Chunk &operator=(const Chunk &c) {
-        m_worldGenerator = c.m_worldGenerator;
-        m_position = c.m_position;
-        return *this;
-    }
+    Chunk &operator=(const Chunk &c);
 
     void update();
     void generate();
     void render();
 
-    inline Chunk* const getNorth() const { return m_north; }
-    inline Chunk* const getEast() const { return m_east; }
-    inline Chunk* const getSouth() const { return m_south; }
-    inline Chunk* const getWest() const { return m_west; }
+    inline Chunk* const getNorth() const noexcept { return m_north; }
+    inline Chunk* const getEast() const noexcept { return m_east; }
+    inline Chunk* const getSouth() const noexcept { return m_south; }
+    inline Chunk* const getWest() const noexcept { return m_west; }
 
     inline void setNorth(Chunk* chunk_ptr, bool itsNeighbour=false) {
         m_needUpdate = true;
@@ -74,30 +70,33 @@ public:
             m_west->setEast(this, true);
     }
 
-    [[nodiscard]] inline bool needUpdate() const { return m_needUpdate; }
-    [[nodiscard]] inline bool isGenerated() const { return m_generated; }
-    [[nodiscard]] inline bool isTransparent(int x, int y, int z) const {
-        return BLOCK_PROP[getBlock(x, y, z).block].transparent;
+    [[nodiscard]] inline bool needUpdate() const noexcept { return m_needUpdate; }
+    [[nodiscard]] inline bool isGenerated() const noexcept { return m_generated; }
+    [[nodiscard]] inline const bool& isTransparent(int x, int y, int z) const {
+        return BLOCKS[getBlock(x, y, z).ID].transparent;
     }
 
-    [[nodiscard]] glm::ivec2 getPosition() const { return {m_position.x, m_position.z}; }
+    [[nodiscard]] inline glm::ivec2 getXZPosition() const noexcept { return {m_position.x, m_position.z}; }
     [[nodiscard]] const st_block& getBlock(int x, int y, int z) const;
 
     inline void setBlock(int x, int y, int z, unsigned char block = AIR) {
-        if (block != m_blocks[linearizeCoord(x, y, z)].block)
+        if (block != m_blocks[linearizeCoord(x, y, z)].ID) {
             m_needUpdate = true;
-        m_blocks[linearizeCoord(x, y, z)].block = block;
+            m_blocks[linearizeCoord(x, y, z)].ID = block;
+        }
     }
-
-    [[nodiscard]] inline short getCornerLight(int x, int y, int z);
 
 
 private:
+    st_block m_blocks[C_EXTEND * C_EXTEND * C_HEIGHT];
+
     bool m_needUpdate{ true };
+    bool m_generated{ false };
     Chunk *m_north{ nullptr }, *m_east{ nullptr }, *m_south{ nullptr }, *m_west{ nullptr };
 
     [[nodiscard]] st_block& getBlockRef(int x, int y, int z);
-    bool m_generated{ false };
+    [[nodiscard]] inline short getCornerLight(int x, int y, int z);
+
     void initializeVertexArray();
 
     void addFace(short ID, const glm::fvec3 &pos, const glm::fvec3 &edgeA, const glm::fvec3 &edgeB);
@@ -109,7 +108,8 @@ private:
     WorldGenerator *m_worldGenerator{ nullptr };
     bool m_hasVertexUpdate{ false };
 
-    st_block m_blocks[C_EXTEND * C_EXTEND * C_HEIGHT];
+    std::mutex vertexLock;
+    std::mutex chunkDestructionLock;
 
     int vertexCount{0};
     int currentBufferSize{0};

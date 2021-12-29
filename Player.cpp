@@ -2,7 +2,7 @@
 // Created by jana on 28.12.21.
 //
 
-#include "Player.h"
+#include "Player.hpp"
 #include <glm/ext.hpp>
 
 static constexpr double MOUSE_SPEED = 0.1;

@@ -2,8 +2,8 @@
 // Created by jana on 28.12.21.
 //
 
-#ifndef KXCRAFT_PLAYER_H
-#define KXCRAFT_PLAYER_H
+#ifndef KXCRAFT_PLAYER_HPP
+#define KXCRAFT_PLAYER_HPP
 
 #include <glm/glm.hpp>
 #include "World.hpp"
@@ -20,13 +20,9 @@ public:
 
     void update(GLFWwindow *window, const double &time, const double &dTime);
 
-    [[nodiscard]] inline const glm::fvec3 &getPosition() const noexcept {
-        return position;
-    }
+    [[nodiscard]] inline const glm::fvec3 &getPosition() const noexcept { return position; }
 
-    [[nodiscard]] inline const glm::fvec3 &getDirection() const noexcept {
-        return direction;
-    }
+    [[nodiscard]] inline const glm::fvec3 &getDirection() const noexcept { return direction; }
 
     [[nodiscard]] inline glm::fvec3 getEyePosition() const noexcept {
         return position + glm::fvec3(0, bbox.y - 0.1f, 0);
@@ -47,4 +43,4 @@ private:
 };
 
 
-#endif //KXCRAFT_PLAYER_H
+#endif //KXCRAFT_PLAYER_HPP

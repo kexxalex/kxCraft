@@ -14,9 +14,9 @@
 #include <thread>
 #include <iostream>
 #include "World.hpp"
-#include "Player.h"
+#include "Player.hpp"
 #include "ShaderManager.hpp"
-#include "TextureManager.h"
+#include "TextureManager.hpp"
 
 
 static GLFWwindow *WINDOW = nullptr;

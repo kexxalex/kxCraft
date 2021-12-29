@@ -8,6 +8,7 @@
 #include "Chunk.hpp"
 #include "Block.hpp"
 #include <GL/glew.h>
+#include <iostream>
 
 
 
@@ -16,10 +17,17 @@ Chunk::Chunk(WorldGenerator *worldGenerator, int x, int z)
           m_north{nullptr}, m_east{nullptr}, m_south{nullptr}, m_west{nullptr} {
 }
 
+Chunk &Chunk::operator=(const Chunk &c) {
+    m_worldGenerator = c.m_worldGenerator;
+    m_position = c.m_position;
+    return *this;
+}
+
 Chunk::~Chunk() {
+    chunkDestructionLock.lock();
     if (!m_generated)
         return;
-    // std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
+    std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();
@@ -43,18 +51,51 @@ Chunk::~Chunk() {
 }
 
 void Chunk::generate() {
-    m_generated = true;
-    for (int z = 0; z < C_EXTEND; z++) {
-        for (int x = 0; x < C_EXTEND; x++) {
-            m_worldGenerator->placeStack(
-                    x + (int) m_position.x, z + (int) m_position.z,
-                    &m_blocks[linearizeCoord(x, 0, z)]);
+    if (chunkDestructionLock.try_lock()) {
+        for (int z = 0; z < C_EXTEND; z++) {
+            for (int x = 0; x < C_EXTEND; x++) {
+                m_worldGenerator->placeStack(
+                        x + (int) m_position.x, z + (int) m_position.z,
+                        &m_blocks[linearizeCoord(x, 0, z)]);
+            }
         }
+        fillSunlight();
+        m_generated = true;
+        chunkDestructionLock.unlock();
     }
-    fillSunlight();
 }
 
-[[nodiscard]] inline short Chunk::getCornerLight(int x, int y, int z) {
+st_block& Chunk::getBlockRef(int x, int y, int z) {
+    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
+    if (!outOfBounds)
+        return m_blocks[linearizeCoord(x, y, z)];
+    else if (z >= C_EXTEND && m_north != nullptr)
+        return m_north->getBlockRef(x, y, z - C_EXTEND);
+    else if (x >= C_EXTEND && m_east != nullptr)
+        return m_east->getBlockRef(x - C_EXTEND, y, z);
+    else if (z < 0 && m_south != nullptr)
+        return m_south->getBlockRef(x, y, z + C_EXTEND);
+    else if (x < 0 && m_west != nullptr)
+        return m_west->getBlockRef(x + C_EXTEND, y, z);
+    return AIR_BLOCK;
+}
+
+const st_block& Chunk::getBlock(int x, int y, int z) const {
+    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
+    if (!outOfBounds)
+        return m_blocks[linearizeCoord(x, y, z)];
+    else if (z >= C_EXTEND && m_north != nullptr)
+        return m_north->getBlock(x, y, z - C_EXTEND);
+    else if (x >= C_EXTEND && m_east != nullptr)
+        return m_east->getBlock(x - C_EXTEND, y, z);
+    else if (z < 0 && m_south != nullptr)
+        return m_south->getBlock(x, y, z + C_EXTEND);
+    else if (x < 0 && m_west != nullptr)
+        return m_west->getBlock(x + C_EXTEND, y, z);
+    return AIR_BLOCK;
+}
+
+short Chunk::getCornerLight(int x, int y, int z) {
     //neighbourLock.lock();
     const st_block& b111 = getBlock(x, y, z);
     const st_block& b101 = getBlock(x-1, y, z);
@@ -88,51 +129,50 @@ void Chunk::addFace(short ID, const glm::fvec3 &pos,
 }
 
 void Chunk::addCube(int x, int y, int z, short block) {
+    // Add top and bottom face
+    const bool& connect = BLOCKS[block].connect;
+    if (isTransparent(x, y + 1, z))
+        addFace(BLOCKS[block].top,
+                glm::fvec3(x, y + 1, z),
+                glm::fvec3(0, 0, 1),
+                glm::fvec3(1, 0, 0));
+    if (isTransparent(x, y - 1, z))
+        addFace(BLOCKS[block].bottom,
+                glm::fvec3(x, y, z),
+                glm::fvec3(1, 0, 0),
+                glm::fvec3(0, 0, 1));
+
+
+    // Add north and south face
+    if (isTransparent(x, y, z + 1))
+        addFace((connect && getBlock(x, y-1, z+1).ID == block) ? BLOCKS[block].top : BLOCKS[block].north,
+                glm::fvec3(x, y, z + 1),
+                glm::fvec3(1, 0, 0),
+                glm::fvec3(0, 1, 0));
+    if (isTransparent(x, y, z - 1))
+        addFace((connect && getBlock(x, y-1, z-1).ID == block) ? BLOCKS[block].top : BLOCKS[block].south,
+                glm::fvec3(x + 1, y, z),
+                glm::fvec3(-1, 0, 0),
+                glm::fvec3(0, 1, 0));
+
+
+    // Add east and west face
     if (isTransparent(x - 1, y, z)) {
-        addFace((BLOCK_PROP[block].connect && getBlock(x-1, y-1, z).block == block)
-                    ? BLOCK_PROP[block].top
-                    : BLOCK_PROP[block].west,
+        addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
                 glm::fvec3(x, y, z),
                 glm::fvec3(0, 0, 1),
                 glm::fvec3(0, 1, 0));
     }
     if (isTransparent(x + 1, y, z))
-        addFace((BLOCK_PROP[block].connect && getBlock(x+1, y-1, z).block == block)
-                ? BLOCK_PROP[block].top
-                : BLOCK_PROP[block].east,
+        addFace((connect && getBlock(x+1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].east,
                 glm::fvec3(x + 1, y, z + 1),
                 glm::fvec3(0, 0, -1),
-                glm::fvec3(0, 1, 0));
-
-
-    if (isTransparent(x, y + 1, z))
-        addFace(BLOCK_PROP[block].top,
-                glm::fvec3(x, y + 1, z),
-                glm::fvec3(0, 0, 1),
-                glm::fvec3(1, 0, 0));
-    if (isTransparent(x, y - 1, z))
-        addFace(BLOCK_PROP[block].bottom,
-                glm::fvec3(x, y, z),
-                glm::fvec3(1, 0, 0),
-                glm::fvec3(0, 0, 1));
-
-    if (isTransparent(x, y, z + 1))
-        addFace((BLOCK_PROP[block].connect && getBlock(x, y-1, z+1).block == block)
-                    ? BLOCK_PROP[block].top
-                    : BLOCK_PROP[block].north,
-                glm::fvec3(x, y, z + 1),
-                glm::fvec3(1, 0, 0),
-                glm::fvec3(0, 1, 0));
-    if (isTransparent(x, y, z - 1))
-        addFace((BLOCK_PROP[block].connect && getBlock(x, y-1, z-1).block == block)
-                    ? BLOCK_PROP[block].top
-                    : BLOCK_PROP[block].south,
-                glm::fvec3(x + 1, y, z),
-                glm::fvec3(-1, 0, 0),
                 glm::fvec3(0, 1, 0));
 }
 
 void Chunk::update() {
+    if (!chunkDestructionLock.try_lock())
+        return;
 
     std::vector<glm::ivec3> updateBlocks;
     for (int z = 0; z < C_EXTEND; z++) {
@@ -148,19 +188,19 @@ void Chunk::update() {
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
 
-    m_needUpdate = false;
+    vertexLock.lock();
     m_vertices.clear();
 
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
             for (int y = 0; y < C_HEIGHT; y++) {
                 const st_block& block = m_blocks[linearizeCoord(x, y, z)];
-                if (block.block == BLOCK_ID::AIR)
+                if (block.ID == BLOCK_ID::AIR)
                     continue;
 
-                switch (BLOCK_PROP[block.block].type) {
+                switch (BLOCKS[block.ID].type) {
                     case R_BLOCK:
-                        addCube(x, y, z, block.block);
+                        addCube(x, y, z, block.ID);
                         break;
                     case R_CROSS:
                         break;
@@ -169,12 +209,15 @@ void Chunk::update() {
         }
     }
 
+    m_needUpdate = false;
+    vertexLock.unlock();
     m_hasVertexUpdate = true;
+    chunkDestructionLock.unlock();
 }
 
 void Chunk::initializeVertexArray() {
-    glGenVertexArrays(1, &vaoID);
-    glGenBuffers(1, &vboID);
+    glCreateVertexArrays(1, &vaoID);
+    glCreateBuffers(1, &vboID);
 
     glBindVertexArray(vaoID);
     glBindBuffer(GL_ARRAY_BUFFER, vboID);
@@ -220,7 +263,7 @@ void Chunk::render() {
 void Chunk::fillSunlight() {
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
-            for (int y = C_HEIGHT-1; y >= 0 && m_blocks[linearizeCoord(x, y, z)].block == AIR; y--) {
+            for (int y = C_HEIGHT-1; y >= 0 && m_blocks[linearizeCoord(x, y, z)].ID == AIR; y--) {
                 m_blocks[linearizeCoord(x, y, z)].sunLight = MAX_SUN_LIGHT;
             }
         }
@@ -228,9 +271,11 @@ void Chunk::fillSunlight() {
 }
 
 void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updateBlocks) {
+    // Discard update, if block is not in this chunk
     if (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT)
         return;
-    st_block &current = getBlockRef(x, y, z);
+
+    st_block &current(getBlockRef(x, y, z));
     st_block &t(getBlockRef(x, y + 1, z));
     st_block &b(getBlockRef(x, y - 1, z));
 
@@ -239,7 +284,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
     st_block &s(getBlockRef(x, y, z - 1));
     st_block &w(getBlockRef(x - 1, y, z));
 
-    short maxSunLight = glm::max(
+    int maxSunLight = glm::max(
             glm::max(t.getSunLight(), b.getSunLight()),
             glm::max(
                     glm::max(n.getSunLight(), e.getSunLight()),
@@ -247,20 +292,20 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
             )
     );
 
-    if (current.block == BLOCK_ID::AIR && maxSunLight > current.sunLight + 1) {
+    if (current.ID == BLOCK_ID::AIR && maxSunLight > current.sunLight + 1) {
         current.sunLight = maxSunLight - 1;
 
         bool inBounds = (x > 0 && y > 0 & z > 0 && x+1 < C_EXTEND && z+1 < C_EXTEND && y+1 < C_HEIGHT);
 
-        if (t.sunLight != 255 && glm::abs(t.sunLight - current.sunLight) > 1 && inBounds)
+        if (t.sunLight != NO_LIGHT && glm::abs(t.sunLight - current.sunLight) > 1 && inBounds)
         {
             updateBlocks.emplace_back(x, y+1, z);
         }
-        if (b.sunLight != 255 && glm::abs(b.sunLight - current.sunLight) > 1 && inBounds) {
+        if (b.sunLight != NO_LIGHT && glm::abs(b.sunLight - current.sunLight) > 1 && inBounds) {
             updateBlocks.emplace_back(x, y-1, z);
         }
 
-        if (n.sunLight != 255 && glm::abs(n.sunLight - current.sunLight) > 1) {
+        if (n.sunLight != NO_LIGHT && glm::abs(n.sunLight - current.sunLight) > 1) {
             if (inBounds)
                 updateBlocks.emplace_back(x, y, z+1);
             else {
@@ -268,7 +313,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_north->m_needUpdate = true;
             }
         }
-        if (e.sunLight != 255 && glm::abs(e.sunLight - current.sunLight) > 1 && inBounds) {
+        if (e.sunLight != NO_LIGHT && glm::abs(e.sunLight - current.sunLight) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x+1, y, z);
             else {
@@ -276,7 +321,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_east->m_needUpdate = true;
             }
         }
-        if (s.sunLight != 255 && glm::abs(s.sunLight - current.sunLight) > 1 && inBounds) {
+        if (s.sunLight != NO_LIGHT && glm::abs(s.sunLight - current.sunLight) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x, y, z-1);
             else {
@@ -284,7 +329,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_south->m_needUpdate = true;
             }
         }
-        if (w.sunLight != 255 && glm::abs(w.sunLight - current.sunLight) > 1 && inBounds) {
+        if (w.sunLight != NO_LIGHT && glm::abs(w.sunLight - current.sunLight) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x-1, y, z);
             else {
@@ -293,34 +338,4 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
             }
         }
     }
-}
-
-st_block& Chunk::getBlockRef(int x, int y, int z) {
-    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
-    if (!outOfBounds)
-        return m_blocks[linearizeCoord(x, y, z)];
-    else if (z >= C_EXTEND && m_north != nullptr)
-        return m_north->getBlockRef(x, y, z - C_EXTEND);
-    else if (x >= C_EXTEND && m_east != nullptr)
-        return m_east->getBlockRef(x - C_EXTEND, y, z);
-    else if (z < 0 && m_south != nullptr)
-        return m_south->getBlockRef(x, y, z + C_EXTEND);
-    else if (x < 0 && m_west != nullptr)
-        return m_west->getBlockRef(x + C_EXTEND, y, z);
-    return AIR_BLOCK;
-}
-
-const st_block& Chunk::getBlock(int x, int y, int z) const {
-    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
-    if (!outOfBounds)
-        return m_blocks[linearizeCoord(x, y, z)];
-    else if (z >= C_EXTEND && m_north != nullptr)
-        return m_north->getBlock(x, y, z - C_EXTEND);
-    else if (x >= C_EXTEND && m_east != nullptr)
-        return m_east->getBlock(x - C_EXTEND, y, z);
-    else if (z < 0 && m_south != nullptr)
-        return m_south->getBlock(x, y, z + C_EXTEND);
-    else if (x < 0 && m_west != nullptr)
-        return m_west->getBlock(x + C_EXTEND, y, z);
-    return AIR_BLOCK;
 }

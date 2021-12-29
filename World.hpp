@@ -59,14 +59,7 @@ public:
                AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
     };
 
-    inline void reloadCurrentChunk() {
-        const glm::ivec2 chunkPos = glm::ivec2(
-                glm::floor(playerPosition.x / C_EXTEND),
-                glm::floor(playerPosition.z / C_EXTEND)
-        ) * C_EXTEND;
-        if (chunks.find(chunkPos) != chunks.end())
-            chunks[chunkPos].update();
-    }
+    void reloadCurrentChunk();
 
     [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }

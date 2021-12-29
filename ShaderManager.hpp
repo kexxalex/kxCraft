@@ -11,12 +11,10 @@ public:
     ~ShaderManager();
 
     void initialize();
+    void reloadAll();
 
     std::shared_ptr<Shader> getShader(const char *name) noexcept;
-
-    std::shared_ptr<Shader> &getDefault() noexcept { return shaders[0]; }
-
-    void reloadAll();
+    std::shared_ptr<Shader> &getDefault() noexcept { return m_default; }
 
 private:
     std::shared_ptr<Shader> m_default{nullptr};

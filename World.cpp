@@ -30,12 +30,34 @@ void World::update(int threadID) {
 
     if (threadID == 0)
         addChunk(chunkPos);
+
+    // add rectangular edge chunks with 'radius' r
+    /*
+                   +
+
+                   |
+             +  <--+-->   +
+                   |
+
+                   +
+    */
     for (int r = 1 + threadID; r <= renderDistance; r += threadCount) {
-        // add rectangular edge chunks with 'radius' r
+        // center of each edge
         addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y});
         addChunk({chunkPos.x - r * C_EXTEND, chunkPos.y});
         addChunk({chunkPos.x, chunkPos.y + r * C_EXTEND});
         addChunk({chunkPos.x, chunkPos.y - r * C_EXTEND});
+
+        // for each edge from its center to its corner
+        /*
+                +   <--+-->   +
+                       |
+                |      |      |
+                +------+------+
+                |      |      |
+                       |
+                +   <--+-->   +
+        */
         for (int s = 1; s <= r; s++) {
             addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y + s * C_EXTEND});
             addChunk({chunkPos.x + r * C_EXTEND, chunkPos.y - s * C_EXTEND});
@@ -43,28 +65,34 @@ void World::update(int threadID) {
             addChunk({chunkPos.x - r * C_EXTEND, chunkPos.y + s * C_EXTEND});
             addChunk({chunkPos.x - r * C_EXTEND, chunkPos.y - s * C_EXTEND});
 
-            addChunk({chunkPos.x + s * C_EXTEND, chunkPos.y + r * C_EXTEND});
-            addChunk({chunkPos.x - s * C_EXTEND, chunkPos.y + r * C_EXTEND});
+            if (s < r) {
+                addChunk({chunkPos.x + s * C_EXTEND, chunkPos.y + r * C_EXTEND});
+                addChunk({chunkPos.x - s * C_EXTEND, chunkPos.y + r * C_EXTEND});
 
-            addChunk({chunkPos.x + s * C_EXTEND, chunkPos.y - r * C_EXTEND});
-            addChunk({chunkPos.x - s * C_EXTEND, chunkPos.y - r * C_EXTEND});
+                addChunk({chunkPos.x + s * C_EXTEND, chunkPos.y - r * C_EXTEND});
+                addChunk({chunkPos.x - s * C_EXTEND, chunkPos.y - r * C_EXTEND});
+            }
         }
     }
+
     for (auto& chunk : chunks) {
         Chunk &c = chunk.second;
-        const glm::ivec2 north = c.getPosition() + glm::ivec2(0, C_EXTEND);
-        const glm::ivec2 east = c.getPosition() + glm::ivec2(C_EXTEND, 0);
-        const glm::ivec2 south = c.getPosition() + glm::ivec2(0, -C_EXTEND);
-        const glm::ivec2 west = c.getPosition() + glm::ivec2(-C_EXTEND, 0);
+        const glm::ivec2 north = c.getXZPosition() + glm::ivec2(0, C_EXTEND);
+        const glm::ivec2 east = c.getXZPosition() + glm::ivec2(C_EXTEND, 0);
+        const glm::ivec2 south = c.getXZPosition() + glm::ivec2(0, -C_EXTEND);
+        const glm::ivec2 west = c.getXZPosition() + glm::ivec2(-C_EXTEND, 0);
 
-        if (c.getNorth() == nullptr && chunks.find(north) != chunks.end())
-            c.setNorth(&chunks[north]);
-        if (c.getEast() == nullptr && chunks.find(east) != chunks.end())
-            c.setEast(&chunks[east]);
-        if (c.getSouth() == nullptr && chunks.find(south) != chunks.end())
-            c.setSouth(&chunks[south]);
-        if (c.getWest() == nullptr && chunks.find(west) != chunks.end())
-            c.setWest(&chunks[west]);
+        if (chunkLock.try_lock()) {
+            if (c.getNorth() == nullptr && chunks.find(north) != chunks.end())
+                c.setNorth(&chunks[north]);
+            if (c.getEast() == nullptr && chunks.find(east) != chunks.end())
+                c.setEast(&chunks[east]);
+            if (c.getSouth() == nullptr && chunks.find(south) != chunks.end())
+                c.setSouth(&chunks[south]);
+            if (c.getWest() == nullptr && chunks.find(west) != chunks.end())
+                c.setWest(&chunks[west]);
+            chunkLock.unlock();
+        }
 
         if (c.needUpdate()) {
             c.update();
@@ -133,4 +161,13 @@ void World::render() {
         chunks.erase(rmChunk);
     }
     chunkLock.unlock();
+}
+
+void World::reloadCurrentChunk() {
+    const glm::ivec2 chunkPos = glm::ivec2(
+            glm::floor(playerPosition.x / C_EXTEND),
+            glm::floor(playerPosition.z / C_EXTEND)
+    ) * C_EXTEND;
+    if (chunks.find(chunkPos) != chunks.end())
+        chunks[chunkPos].update();
 }

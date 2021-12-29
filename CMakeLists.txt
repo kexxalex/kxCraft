@@ -9,10 +9,10 @@ set(SOURCE_FILES main.cpp
         Chunk.cpp Chunk.hpp
         World.cpp World.hpp
         WorldGenerator.cpp WorldGenerator.hpp
-        BMP.cpp BMP.h
-        Texture.cpp Texture.h
-        TextureManager.cpp TextureManager.h
-        Item.hpp Block.hpp Player.cpp Player.h)
+        BMP.cpp BMP.hpp
+        Texture.cpp Texture.hpp
+        TextureManager.cpp TextureManager.hpp
+        Item.hpp Block.hpp Player.cpp Player.hpp)
 
 add_executable(kxCraft ${SOURCE_FILES})
 target_link_libraries(kxCraft -lGLEW -lglfw -lGL -lpthread -lnoise)
