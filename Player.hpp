@@ -1,9 +1,7 @@
 //
 // Created by jana on 28.12.21.
 //
-
-#ifndef KXCRAFT_PLAYER_HPP
-#define KXCRAFT_PLAYER_HPP
+#pragma once
 
 #include <glm/glm.hpp>
 #include "World.hpp"
@@ -40,7 +38,9 @@ private:
 
     bool canJump{false};
     bool isFlying{false};
+
+    void handleKeys(GLFWwindow *window, const double &dTime);
+
+    [[nodiscard]] bool collide(float x, float y, float z) const;
+
 };
-
-
-#endif //KXCRAFT_PLAYER_HPP
