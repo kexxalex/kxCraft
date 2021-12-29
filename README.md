@@ -3,9 +3,10 @@
 kxCraft is C++ based minecraft clone using modern OpenGL (>= 3.3 required) with DSA and one extra thread for world generation.
 
 ## Feature list and plans
-- [x] Multithreaded World Loader (only stable for one thread)
+- [x] Multithreaded world loader (only stable for one thread)
 - [x] GLSL Vertex, Fragment and Geometry Shader
 - [x] Angle view culling
+- [x] Cave and mountain generation
 - [x] Lighting system
 - [ ] Generate decoration like grass, flowers and trees
 - [ ] Collision detection
