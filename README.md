@@ -10,12 +10,12 @@ kxCraft is a C++ based minecraft clone using modern OpenGL (>= 4.2 required) wit
 - [x] Lighting system
 - [x] Collision detection
 - [x] Basic player movement
-- [ ] Generate decoration like grass, flowers and trees
-- [ ] Build and destroy blocks
+- [x] Generate decoration like grass (flowers and trees coming soon)
+- [x] Build and destroy blocks (currently no indicator)
 - [ ] PBR Shader
 
 ## Currently working on
- - Generate decoration like grass, flowers and trees
+ - Generate flowers and trees
  - Custom textures
 
 
