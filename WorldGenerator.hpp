@@ -12,7 +12,7 @@
 
 static constexpr int C_EXTEND = 16;
 static constexpr int C_HEIGHT = 384;
-static constexpr unsigned char MAX_SUN_LIGHT = 16;
+static constexpr unsigned char MAX_SUN_LIGHT = 15;
 static constexpr unsigned char NO_LIGHT = 0xFF;
 
 struct st_block {

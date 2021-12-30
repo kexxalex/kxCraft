@@ -24,7 +24,7 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static bool VSYNC = true;
+static bool VSYNC = false;
 static World WORLD;
 static Player PLAYER;
 
@@ -50,8 +50,8 @@ void window_size_callback(GLFWwindow* window, int width, int height)
 }
 
 bool initGLWindow() {
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
@@ -106,7 +106,7 @@ void render() {
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
     shader->setMatrixFloat4("MVP", MVP);
-    shader->setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
+    shader->setFloat3("PLAYER_POSITION", PLAYER.getPosition());
     shader->setFloat("TIME", (float)time);
 
     WORLD.render();
@@ -135,7 +135,7 @@ int main() {
 
     std::cout << "OpenGL " << glGetString(GL_VERSION) << std::endl;
 
-    glClearColor(0.8, 0.95, 1.0, 1.0);
+    glClearColor(0.75, 0.9, 1.0, 1.0);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_TEXTURE_2D);
@@ -144,17 +144,21 @@ int main() {
     TEXTURE_MANAGER.initialize(4);
     static auto shader = SHADER_MANAGER.getDefault().get();
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture(
-            "./res/terrain.bmp", false, false, 1
+            "./res/terrain.bmp", false, false
     );
 
     shader->Bind();
     DIFFUSE->BindTo(0);
 
-    constexpr int thread_count = 1;
+    constexpr int thread_count = 2;
     WORLD = World({0, 0, 0}, 255, 16, thread_count);
     std::thread worldUpdater[thread_count];
 
-    PLAYER = Player(&WORLD, {0, 224.0f, 0}, {0.6f, 1.8f, 0.6f});
+    float y = 255.0f;
+    while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
+        y--;
+    }
+    PLAYER = Player(&WORLD, {0, y + 1.1f, 0}, {0.6f, 1.8f, 0.6f});
     shader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
 
     for (int i = 0; i < thread_count; i++) {

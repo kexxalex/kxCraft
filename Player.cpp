@@ -8,6 +8,7 @@
 #include <iostream>
 
 static constexpr double MOUSE_SPEED = 0.1;
+static constexpr float MOVEMENT_SPEED = 3.5f;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
         : position(position), bbox(bbox), world(world) {
@@ -23,21 +24,30 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
     direction = (rotY * rotX * glm::fvec4(0, 0, 1, 0));
 
     if (glm::dot(velocity, velocity) > 0) {
-        glm::fvec3 delta = glm::normalize(velocity) * (static_cast<float>(dTime) * C_EXTEND);
+        float dx = velocity.x * static_cast<float>(dTime) * MOVEMENT_SPEED;
+        float dy = velocity.y * static_cast<float>(dTime);
+        float dz = velocity.z * static_cast<float>(dTime) * MOVEMENT_SPEED;
 
-        std::cout << position.x << " " << position.y << " " << position.z << " -- "
-                  << collide(position.x + delta.x, position.y, position.z) << std::endl;
+        if (!collide(position.x + dx, position.y, position.z))
+            position.x += dx;
 
-        if (!collide(position.x + delta.x, position.y, position.z))
-            position.x += delta.x;
+        if (!collide(position.x, position.y + dy, position.z)) {
+            if (velocity.y < 0)
+                canJump = false;
+            position.y += dy;
+        }
+        else {
+            if (velocity.y < 0)
+                canJump = true;
+            velocity.y = 0;
+        }
 
-        if (!collide(position.x, position.y + delta.y, position.z))
-            position.y += delta.y;
-
-        if (!collide(position.x, position.y, position.z + delta.z))
-            position.z += delta.z;
+        if (!collide(position.x, position.y, position.z + dz))
+            position.z += dz;
 
     }
+
+    velocity.y -= static_cast<float>(dTime)*2*9.81f;
 
     world->setPlayer(position, direction);
 }
@@ -48,7 +58,8 @@ void Player::addAngle(const glm::dvec2 &angle) {
 }
 
 void Player::handleKeys(GLFWwindow *window, const double &dTime) {
-    velocity = {0, 0, 0};
+    velocity.x = 0;
+    velocity.z = 0;
     double angle = glm::radians(cameraAngle.x);
 
     if (glfwGetKey(window, GLFW_KEY_W)) {
@@ -63,11 +74,12 @@ void Player::handleKeys(GLFWwindow *window, const double &dTime) {
     if (glfwGetKey(window, GLFW_KEY_S)) {
         velocity += glm::fvec3(glm::sin(angle), 0, -glm::cos(angle));
     }
-    if (glfwGetKey(window, GLFW_KEY_SPACE)) {
-        position.y += (float) dTime * C_EXTEND;
+    if (canJump && glfwGetKey(window, GLFW_KEY_SPACE)) {
+        canJump = false;
+        velocity.y = 6.8f;
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
-        position.y -= (float) dTime * C_EXTEND;
+        velocity.y -= 1;
     }
 
 }
@@ -76,14 +88,13 @@ bool Player::collide(float x, float y, float z) const {
     for (int i = 0; i < 2; i++) {
         for (int j = 0; j < 3; j++) {
             for (int k = 0; k < 2; k++) {
-                std::cout << x << " " << y << " " << z << std::endl;
-                const auto &block = world->getBlock(
+                const st_block &block = world->getBlock(
                         x + (-0.5f + (float) i) * bbox.x,
                         y + (0.5f * (float) j) * bbox.y,
                         z + (-0.5f + (float) k) * bbox.z
                 );
 
-                if (block.ID != AIR) {
+                if (BLOCKS[block.ID].collision) {
                     return true;
                 }
             }

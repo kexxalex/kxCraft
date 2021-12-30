@@ -38,7 +38,7 @@ public:
 
     void update();
     void generate();
-    void render();
+    void render(int &availableChanges);
 
     inline Chunk* const getNorth() const noexcept { return m_north; }
     inline Chunk* const getEast() const noexcept { return m_east; }

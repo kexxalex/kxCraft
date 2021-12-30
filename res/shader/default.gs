@@ -21,7 +21,7 @@ void main() {
     vec3 edgeB = gl_in[2].gl_Position.xyz - pos;
 
     gNormal = normalize(cross(edgeA, edgeB));
-    gLight = vec4(vLight[0], vLight[1], vLight[2], vTexture[1]);
+    gLight = vec4(vLight[0], vLight[1], vLight[2], vTexture[1]) * 0.01666666666f;
 
     gl_Position = MVP * vec4(pos, 1.0);
     gFragPosition = pos;

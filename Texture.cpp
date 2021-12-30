@@ -1,5 +1,6 @@
 #include <GL/glew.h>
 #include "Texture.hpp"
+#include <glm/glm.hpp>
 
 Texture::Texture(unsigned int ID, const char *data,
                  int width, int height, unsigned bytesPerPixel,
@@ -24,30 +25,30 @@ Texture::Texture(unsigned int ID, const char *data,
             internalFormat = GL_RGB8;
     }
 
-    glBindTexture(GL_TEXTURE_2D, ID);
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0,
-                 bytesPerPixel == 3 ? GL_BGR : GL_BGRA, GL_UNSIGNED_BYTE, data);
-    glBindTexture(GL_TEXTURE_2D, 0);
-
 
     glTextureParameteri(ID, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTextureParameteri(ID, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
     glTextureParameteri(ID, GL_TEXTURE_MAG_FILTER, interpolation ? GL_LINEAR : GL_NEAREST);
 
     if (mipmaps) {
-        // glTextureParameteri(ID, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
+        int levels = static_cast<int>(glm::log2(static_cast<float>((width > height) ? width : height)));
+        glTextureStorage2D(ID, levels, internalFormat, width, height);
         glTextureParameteri(ID, GL_TEXTURE_MAX_ANISOTROPY, anisotropy);
         glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER,
-                        interpolation ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR);
+                            interpolation ? GL_LINEAR_MIPMAP_LINEAR : GL_NEAREST_MIPMAP_LINEAR);
+
+        glTextureSubImage2D(ID, 0,
+                            0, 0, width, height,
+                            bytesPerPixel == 3 ? GL_BGR : GL_BGRA, GL_UNSIGNED_BYTE, data);
+        glGenerateTextureMipmap(ID);
     } else {
-        glTexStorage2D(GL_TEXTURE_2D, 1, internalFormat, width, height);
+        glTextureStorage2D(ID, 1, internalFormat, width, height);
         glTextureParameteri(ID, GL_TEXTURE_MIN_FILTER, interpolation ? GL_LINEAR : GL_NEAREST);
+        glTextureSubImage2D(ID, 0,
+                            0, 0, width, height,
+                            bytesPerPixel == 3 ? GL_BGR : GL_BGRA, GL_UNSIGNED_BYTE, data);
     }
 
-
-    if (mipmaps)
-        glGenerateTextureMipmap(ID);
 }
 
 Texture::Texture(unsigned int ID, const std::unique_ptr<BMP> &bitmap, bool interpolation, bool mipmaps, int anisotropy)
@@ -56,7 +57,6 @@ Texture::Texture(unsigned int ID, const std::unique_ptr<BMP> &bitmap, bool inter
                   interpolation, mipmaps, anisotropy) {}
 
 void Texture::BindTo(int unit) const {
-    glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, m_ID);
+    glBindTextureUnit(unit, m_ID);
 }
 

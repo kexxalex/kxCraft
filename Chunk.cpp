@@ -31,10 +31,14 @@ Chunk::~Chunk() {
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();
-    if (vboID != 0)
+
+    // Delete VAO and VBO
+    if (vboID != 0) {
         glDeleteBuffers(1, &vboID);
-    if (vaoID != 0)
+    }
+    if (vaoID != 0) {
         glDeleteVertexArrays(1, &vaoID);
+    }
 
     if (nullptr != m_north) {
         m_north->m_south = nullptr;
@@ -93,7 +97,6 @@ const st_block& Chunk::getBlock(int x, int y, int z) const {
 }
 
 short Chunk::getCornerLight(int x, int y, int z) {
-    //neighbourLock.lock();
     const st_block& b111 = getBlock(x, y, z);
     const st_block& b101 = getBlock(x-1, y, z);
     const st_block& b110 = getBlock(x, y, z-1);
@@ -103,7 +106,6 @@ short Chunk::getCornerLight(int x, int y, int z) {
     const st_block& b001 = getBlock(x-1, y - 1, z);
     const st_block& b010 = getBlock(x, y - 1, z-1);
     const st_block& b000 = getBlock(x-1, y - 1, z-1);
-    //neighbourLock.unlock();
 
     auto totalLight = (
             (b111.getLight() + b101.getLight() + b110.getLight() + b100.getLight() +
@@ -216,25 +218,24 @@ void Chunk::initializeVertexArray() {
     glCreateVertexArrays(1, &vaoID);
     glCreateBuffers(1, &vboID);
 
-    glBindVertexArray(vaoID);
-    glBindBuffer(GL_ARRAY_BUFFER, vboID);
+    glVertexArrayVertexBuffer(vaoID, 0, vboID, 0, sizeof(st_vertex));
+    glVertexArrayVertexBuffer(vaoID, 1, vboID, 12, sizeof(st_vertex));
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(st_vertex), (void *) 0);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 2, GL_SHORT, GL_FALSE, sizeof(st_vertex), (void *) 12);
-    glEnableVertexAttribArray(1);
+    glVertexArrayAttribFormat(vaoID, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(vaoID, 1, 2, GL_SHORT, GL_FALSE, 0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
+    glEnableVertexArrayAttrib(vaoID, 0);
+    glEnableVertexArrayAttrib(vaoID, 1);
 }
 
-void Chunk::render() {
+void Chunk::render(int &availableChanges) {
     if (!m_generated)
         return;
     if (vaoID == 0 && vboID == 0)
         initializeVertexArray();
 
-    if (m_hasVertexUpdate) {
+    if (availableChanges > 0 && m_hasVertexUpdate) {
+        availableChanges--;
         m_hasVertexUpdate = false;
         vertexCount = static_cast<int>(m_vertices.size());
 

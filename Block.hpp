@@ -24,18 +24,18 @@ class Block {
 public:
     Block() = default;
 
-    Block(const char *name, int texture, bool transparent = false, bool collision = false, bool connect = false,
+    Block(const char *name, int texture, bool transparent = false, bool collision = true, bool connect = false,
           RENDER_TYPE type = R_BLOCK)
             : Block(name, texture, texture, texture, transparent, collision, connect, type) {}
 
     Block(const char *name, int top, int bottom, int side,
-          bool transparent = false, bool collision = false, bool connect = false, RENDER_TYPE type = R_BLOCK)
+          bool transparent = false, bool collision = true, bool connect = false, RENDER_TYPE type = R_BLOCK)
             : Block(name, transparent, collision, connect, top, bottom, side, side, side, side, type) {}
 
     Block(const char *name, bool transparent, bool collision, bool connect,
           int top, int bottom, int north, int east, int south, int west,
           RENDER_TYPE type = R_BLOCK)
-            : name(name), transparent(transparent), connect(connect),
+            : name(name), transparent(transparent), connect(connect), collision(collision),
               top(top - 1), bottom(bottom - 1), north(north - 1), east(east - 1), south(south - 1), west(west - 1),
               type(type) {}
 

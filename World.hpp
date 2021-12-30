@@ -13,7 +13,7 @@
 #include <mutex>
 
 
-constexpr int CHANGE_CHUNK_MAX = 4;
+constexpr int CHANGE_CHUNK_MAX = 1;
 
 
 struct hash_iVec2 {
@@ -31,7 +31,20 @@ public:
         renderDistance = world.renderDistance;
         threadCount = world.threadCount;
         worldGenerator = world.worldGenerator;
+        playerDirection = world.playerDirection;
+        playerPosition = world.playerPosition;
+
         chunks.reserve((2*renderDistance+1) * (2*renderDistance+1));
+
+        glm::ivec2 chunkPos = glm::ivec2(
+                glm::floor(playerPosition.x / C_EXTEND),
+                glm::floor(playerPosition.z / C_EXTEND)
+        ) * C_EXTEND;
+
+        chunkLock.lock();
+        chunks[chunkPos] = Chunk(&worldGenerator, chunkPos.x, chunkPos.y);
+        chunks[chunkPos].generate();
+        chunkLock.unlock();
 
         return *this;
     }
@@ -54,7 +67,7 @@ public:
                 glm::floor(x / C_EXTEND),
                 glm::floor(z / C_EXTEND)
         ) * C_EXTEND;
-        glm::ivec2 inner = glm::ivec2(x, z) - chunkPos;
+        glm::ivec2 inner(glm::floor(x - chunkPos.x), glm::floor(z - chunkPos.y));
         return (y < 0 || y >= C_HEIGHT || chunks.find(chunkPos) == chunks.end()) ?
                AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
     };
@@ -65,7 +78,7 @@ public:
     [[nodiscard]] inline bool isActive() const { return m_active; }
 
 private:
-    void addChunk(const glm::ivec2 &position);
+    void updateChunk(const glm::ivec2 &position);
 
     bool m_active{true};
     int renderDistance{6};
