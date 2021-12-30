@@ -204,6 +204,7 @@ void Chunk::update() {
         return;
 
     std::vector<glm::ivec3> updateBlocks;
+    fillSunlight();
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
             for (int y = C_HEIGHT - 1; y >= 0; y--) {
@@ -264,11 +265,9 @@ bool Chunk::chunkBufferUpdate() {
         initializeVertexArray();
     m_hasVertexUpdate = false;
 
-    vertexLock.lock();
     vertexCount = static_cast<int>(m_vertices.size());
 
     if (vertexCount == 0) {
-        vertexLock.unlock();
         return false;
     }
 
@@ -279,7 +278,6 @@ bool Chunk::chunkBufferUpdate() {
         glNamedBufferData(vboID, newBufferSize, &(m_vertices[0].position[0]), GL_STATIC_DRAW);
         currentBufferSize = newBufferSize;
     }
-    vertexLock.unlock();
 
     return true;
 }
@@ -304,8 +302,10 @@ void Chunk::render(int &availableChanges, Shader *shader) {
 void Chunk::fillSunlight() {
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
-            for (int y = C_HEIGHT-1; y >= 0 && m_blocks[linearizeCoord(x, y, z)].ID == AIR; y--) {
-                m_blocks[linearizeCoord(x, y, z)].setSunLight(MAX_LIGHT);
+            bool sunShaft = true;
+            for (int y = C_HEIGHT-1; y >= 0; y--) {
+                sunShaft = sunShaft && getBlockAttributes(x, y, z).transparent;
+                m_blocks[linearizeCoord(x, y, z)].setSunLight(MAX_LIGHT * sunShaft);
             }
         }
     }

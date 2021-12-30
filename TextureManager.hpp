@@ -20,7 +20,7 @@ public:
 
     std::shared_ptr<Texture> getTexture(unsigned int id) const;
 
-    std::shared_ptr<Texture> loadTexture(const char *name, bool interpolation = true, bool mipmaps = true, int anisotropy=16);
+    std::shared_ptr<Texture> loadTexture(const char *name, bool interpolation = false, bool mipmaps = false, int anisotropy=16);
 
 private:
     std::shared_ptr<Texture> m_default{nullptr};

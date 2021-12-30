@@ -24,8 +24,8 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = true;
-static constexpr int THREAD_COUNT = 1;
+static constexpr bool VSYNC = false;
+static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
 static Player PLAYER;
@@ -149,16 +149,11 @@ int main() {
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
     static auto terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain").get();
-    static auto DIFFUSE = TEXTURE_MANAGER.loadTexture(
-            "./res/terrain.bmp", false, false
-    );
-
-    terrainShader->Bind();
+    static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 5435, 16, THREAD_COUNT);
+    WORLD = World({0, 0, 0}, 4562, 20, THREAD_COUNT);
     std::thread worldUpdater[THREAD_COUNT];
-
     float y = C_HEIGHT;
     while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
         y--;

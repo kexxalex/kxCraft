@@ -76,6 +76,17 @@ public:
 
 private:
     void updateChunk(const glm::ivec2 &position);
+    void updateChunkNeighbours(Chunk &chunk);
+
+    bool toChunkPosition(float x, float y, float z, glm::ivec2 &chunkPos) const;
+    bool toChunkPositionAndOffset(float x, float y, float z, glm::ivec2 &chunkPos, glm::ivec2 &inner) const;
+
+    inline bool toChunkPosition(const glm::fvec3 &position, glm::ivec2 &chunkPos) const {
+        return toChunkPosition(position.x, position.y, position.z, chunkPos);
+    }
+    inline bool toChunkPositionAndOffset(const glm::fvec3 &position, glm::ivec2 &chunkPos, glm::ivec2 &inner) const {
+        return toChunkPositionAndOffset(position.x, position.y, position.z, chunkPos, inner);
+    }
 
     bool m_active{true};
     int renderDistance{6};

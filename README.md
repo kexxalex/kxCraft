@@ -15,8 +15,12 @@ kxCraft is a C++ based minecraft clone using modern OpenGL (>= 4.2 required) wit
 - [ ] PBR Shader
 
 ## Currently working on
- - Generate flowers and trees
- - Custom textures
+1. 3D block selection inidicator
+2. Menus
+3. Optimizing __*ShaderManager*__ and __*TextureManager*__ class
+4. Generate flowers and trees
+5. Custom textures
+
 
 
 
