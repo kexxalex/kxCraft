@@ -10,7 +10,7 @@
 #include <GLFW/glfw3.h>
 
 
-static const float CLIP_ANGLE = glm::cos(glm::radians(40.0f));
+static const float CLIP_ANGLE = glm::cos(glm::radians(45.0f));
 
 
 World::~World() {
@@ -18,7 +18,8 @@ World::~World() {
 }
 
 World::World(const glm::fvec3 &start_position, int seed, int renderDistance, int threadCount)
-        : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed), chunks(4 * renderDistance * renderDistance), playerPosition(start_position)
+        : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed),
+          chunks(4 * renderDistance * renderDistance), playerPosition(start_position)
 {
 
 }
@@ -148,12 +149,18 @@ void World::updateChunk(const glm::ivec2 &position) {
         chunkLock.unlock();
     }
 
-    if (angle > CLIP_ANGLE && c.needUpdate()) {
+    if (c.needUpdate()) {
         chunks.at(position).update();
     }
 }
 
-void World::render(){
+void World::forcePushBuffer() {
+    for (auto &chunk: chunks) {
+        chunk.second.chunkBufferUpdate();
+    }
+}
+
+void World::render(Shader *shader){
     glm::ivec2 chunkPos = glm::ivec2(
             glm::floor(playerPosition.x / C_EXTEND),
             glm::floor(playerPosition.z / C_EXTEND)
@@ -178,7 +185,7 @@ void World::render(){
         float angle = glm::dot(sideA, sideB);
 
         if (angle > CLIP_ANGLE) { // || angle < glm::cos(65.0f * 0.5f))
-            chunk.second.render(availableChanges);
+            chunk.second.render(availableChanges, shader);
         }
     }
 

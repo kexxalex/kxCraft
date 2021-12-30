@@ -59,7 +59,7 @@ public:
         playerDirection = direction;
     }
 
-    void render();
+    void render(Shader *shader);
 
     void setInactive() { m_active = false; }
 
@@ -68,6 +68,8 @@ public:
     const st_block &getBlock(float x, float y, float z) const;;
 
     void reloadCurrentChunk();
+
+    void forcePushBuffer();
 
     [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }

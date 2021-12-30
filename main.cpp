@@ -24,10 +24,12 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static bool VSYNC = true;
-static int THREAD_COUNT = 1;
+static constexpr bool VSYNC = true;
+static constexpr int THREAD_COUNT = 1;
+static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
 static Player PLAYER;
+
 
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
@@ -78,8 +80,10 @@ bool initGLWindow() {
 }
 
 void worldUpdaterThread(int thrID) {
+    WORLD.update(thrID);
     while (WORLD.isActive()) {
         WORLD.update(thrID);
+        FIRST_UPDATE[thrID] = true;
     }
 }
 
@@ -111,7 +115,7 @@ void render(Shader* terrainShader) {
     terrainShader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
     terrainShader->setBool("DISTANCE_CULLING", false);
 
-    WORLD.render();
+    WORLD.render(terrainShader);
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -152,7 +156,7 @@ int main() {
     terrainShader->Bind();
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 5435, 8, THREAD_COUNT);
+    WORLD = World({0, 0, 0}, 5435, 16, THREAD_COUNT);
     std::thread worldUpdater[THREAD_COUNT];
 
     float y = C_HEIGHT;
@@ -165,8 +169,23 @@ int main() {
         worldUpdater[i] = std::thread(worldUpdaterThread, i);
     }
 
+    while (true) {
+        bool allFinished = false;
+        for (bool thr : FIRST_UPDATE) {
+            if (thr) {
+                allFinished = true;
+            }
+        }
+        if (allFinished)
+            break;
+        glfwSwapBuffers(WINDOW);
+        glfwPollEvents();
+    }
+    WORLD.forcePushBuffer();
+
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
+
 
     while (!glfwWindowShouldClose(WINDOW)) {
         render(terrainShader);

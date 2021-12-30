@@ -7,7 +7,6 @@
 
 #include "Chunk.hpp"
 #include <GL/glew.h>
-#include <iostream>
 
 
 
@@ -95,7 +94,7 @@ const st_block& Chunk::getBlock(int x, int y, int z) const {
     return AIR_BLOCK;
 }
 
-short Chunk::getCornerLight(int x, int y, int z) {
+int Chunk::getCornerLight(int x, int y, int z) {
     const st_block& b111 = getBlock(x, y, z);
     const st_block& b101 = getBlock(x-1, y, z);
     const st_block& b110 = getBlock(x, y, z-1);
@@ -106,24 +105,24 @@ short Chunk::getCornerLight(int x, int y, int z) {
     const st_block& b010 = getBlock(x, y - 1, z-1);
     const st_block& b000 = getBlock(x-1, y - 1, z-1);
 
-    auto totalLight = (
+    int totalLight = (
             (b111.getLight() + b101.getLight() + b110.getLight() + b100.getLight() +
             b011.getLight() + b001.getLight() + b010.getLight() + b000.getLight())
     );
 
-    return static_cast<short>(totalLight);
+    return static_cast<int>(totalLight);
 }
 
-void Chunk::addFace(short ID, const glm::fvec3 &pos,
-                    const glm::fvec3 &edgeA, const glm::fvec3 &edgeB) {
+void Chunk::addFace(short ID, const glm::ivec3 &pos,
+                    const glm::ivec3 &edgeA, const glm::ivec3 &edgeB) {
 
     glm::ivec3 p00(pos);
     glm::ivec3 p10(pos + edgeA);
     glm::ivec3 p01(pos + edgeB);
     glm::ivec3 p11(pos + edgeA + edgeB);
-    m_vertices.emplace_back(m_position + pos, ID, getCornerLight(p00.x, p00.y, p00.z));
-    m_vertices.emplace_back(m_position + pos + edgeA, getCornerLight(p11.x, p11.y, p11.z), getCornerLight(p10.x, p10.y, p10.z));
-    m_vertices.emplace_back(m_position + pos + edgeB, 0, getCornerLight(p01.x, p01.y, p01.z));
+    m_vertices.emplace_back(pos, ID, getCornerLight(p00.x, p00.y, p00.z));
+    m_vertices.emplace_back(pos + edgeA, getCornerLight(p11.x, p11.y, p11.z), getCornerLight(p10.x, p10.y, p10.z));
+    m_vertices.emplace_back(pos + edgeB, 0, getCornerLight(p01.x, p01.y, p01.z));
 }
 
 void Chunk::addCube(int x, int y, int z, short block) {
@@ -131,41 +130,41 @@ void Chunk::addCube(int x, int y, int z, short block) {
     const bool& connect = BLOCKS[block].connect;
     if (isTransparent(x, y + 1, z))
         addFace(BLOCKS[block].top,
-                glm::fvec3(x, y + 1, z),
-                glm::fvec3(0, 0, 1),
-                glm::fvec3(1, 0, 0));
+                glm::ivec3(x, y + 1, z),
+                glm::ivec3(0, 0, 1),
+                glm::ivec3(1, 0, 0));
     if (isTransparent(x, y - 1, z))
         addFace(BLOCKS[block].bottom,
-                glm::fvec3(x, y, z),
-                glm::fvec3(1, 0, 0),
-                glm::fvec3(0, 0, 1));
+                glm::ivec3(x, y, z),
+                glm::ivec3(1, 0, 0),
+                glm::ivec3(0, 0, 1));
 
 
     // Add north and south face
     if (isTransparent(x, y, z + 1))
         addFace((connect && getBlock(x, y-1, z+1).ID == block) ? BLOCKS[block].top : BLOCKS[block].north,
-                glm::fvec3(x, y, z + 1),
-                glm::fvec3(1, 0, 0),
-                glm::fvec3(0, 1, 0));
+                glm::ivec3(x, y, z + 1),
+                glm::ivec3(1, 0, 0),
+                glm::ivec3(0, 1, 0));
     if (isTransparent(x, y, z - 1))
         addFace((connect && getBlock(x, y-1, z-1).ID == block) ? BLOCKS[block].top : BLOCKS[block].south,
-                glm::fvec3(x + 1, y, z),
-                glm::fvec3(-1, 0, 0),
-                glm::fvec3(0, 1, 0));
+                glm::ivec3(x + 1, y, z),
+                glm::ivec3(-1, 0, 0),
+                glm::ivec3(0, 1, 0));
 
 
     // Add east and west face
     if (isTransparent(x - 1, y, z)) {
         addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
-                glm::fvec3(x, y, z),
-                glm::fvec3(0, 0, 1),
-                glm::fvec3(0, 1, 0));
+                glm::ivec3(x, y, z),
+                glm::ivec3(0, 0, 1),
+                glm::ivec3(0, 1, 0));
     }
     if (isTransparent(x + 1, y, z))
         addFace((connect && getBlock(x+1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].east,
-                glm::fvec3(x + 1, y, z + 1),
-                glm::fvec3(0, 0, -1),
-                glm::fvec3(0, 1, 0));
+                glm::ivec3(x + 1, y, z + 1),
+                glm::ivec3(0, 0, -1),
+                glm::ivec3(0, 1, 0));
 }
 
 void Chunk::addCross(int x, int y, int z, short block) {
@@ -181,22 +180,22 @@ void Chunk::addCross(int x, int y, int z, short block) {
 
     short texID = BLOCKS[block].top;
 
-    addFace(texID, glm::fvec3(x, y, z),
-            glm::fvec3(1, 0, 1),
-            glm::fvec3(0, 1, 0)
+    addFace(texID, glm::ivec3(x, y, z),
+            glm::ivec3(1, 0, 1),
+            glm::ivec3(0, 1, 0)
     );
-    addFace(texID, glm::fvec3(x, y, z+1),
-            glm::fvec3(1, 0, -1),
-            glm::fvec3(0, 1, 0)
+    addFace(texID, glm::ivec3(x, y, z+1),
+            glm::ivec3(1, 0, -1),
+            glm::ivec3(0, 1, 0)
     );
 
-    addFace(texID, glm::fvec3(x+1, y, z+1),
-            glm::fvec3(-1, 0, -1),
-            glm::fvec3(0, 1, 0)
+    addFace(texID, glm::ivec3(x+1, y, z+1),
+            glm::ivec3(-1, 0, -1),
+            glm::ivec3(0, 1, 0)
     );
-    addFace(texID, glm::fvec3(x+1, y, z),
-            glm::fvec3(-1, 0, 1),
-            glm::fvec3(0, 1, 0)
+    addFace(texID, glm::ivec3(x+1, y, z),
+            glm::ivec3(-1, 0, 1),
+            glm::ivec3(0, 1, 0)
     );
 }
 
@@ -251,39 +250,43 @@ void Chunk::initializeVertexArray() {
     glCreateBuffers(1, &vboID);
 
     glVertexArrayVertexBuffer(vaoID, 0, vboID, 0, sizeof(st_vertex));
-    glVertexArrayVertexBuffer(vaoID, 1, vboID, 12, sizeof(st_vertex));
+    glVertexArrayVertexBuffer(vaoID, 1, vboID, 4, sizeof(st_vertex));
 
-    glVertexArrayAttribFormat(vaoID, 0, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayAttribFormat(vaoID, 1, 2, GL_SHORT, GL_FALSE, 0);
+    glVertexArrayAttribFormat(vaoID, 0, 4, GL_UNSIGNED_BYTE, GL_FALSE, 0);
+    glVertexArrayAttribFormat(vaoID, 1, 1, GL_SHORT, GL_FALSE, 0);
 
     glEnableVertexArrayAttrib(vaoID, 0);
     glEnableVertexArrayAttrib(vaoID, 1);
 }
 
 bool Chunk::chunkBufferUpdate() {
+    if (vaoID == 0 && vboID == 0)
+        initializeVertexArray();
     m_hasVertexUpdate = false;
+
+    vertexLock.lock();
     vertexCount = static_cast<int>(m_vertices.size());
 
     if (vertexCount == 0) {
+        vertexLock.unlock();
         return false;
     }
 
-    int newBufferSize = static_cast<int>(vertexCount * sizeof(glm::fvec4));
+    int newBufferSize = static_cast<int>(vertexCount * sizeof(st_vertex));
     if (newBufferSize <= currentBufferSize) {
-        glNamedBufferSubData(vboID, 0, newBufferSize, &m_vertices[0].position.x);
+        glNamedBufferSubData(vboID, 0, newBufferSize, &(m_vertices[0].position[0]));
     } else {
-        glNamedBufferData(vboID, newBufferSize, &m_vertices[0].position.x, GL_STATIC_DRAW);
+        glNamedBufferData(vboID, newBufferSize, &(m_vertices[0].position[0]), GL_STATIC_DRAW);
         currentBufferSize = newBufferSize;
     }
+    vertexLock.unlock();
 
     return true;
 }
 
-void Chunk::render(int &availableChanges) {
+void Chunk::render(int &availableChanges, Shader *shader) {
     if (!m_generated)
         return;
-    if (vaoID == 0 && vboID == 0)
-        initializeVertexArray();
 
     if (availableChanges > 0 && m_hasVertexUpdate) {
         availableChanges--;
@@ -292,6 +295,7 @@ void Chunk::render(int &availableChanges) {
     }
 
     if (vertexCount > 0) {
+        shader->setFloat3("CHUNK_POSITION", m_position);
         glBindVertexArray(vaoID);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
