@@ -22,7 +22,7 @@ kxCraft is a C++ based minecraft clone using modern OpenGL (>= 4.2 required) wit
 
 ## Compiling for Linux
 
-### 1. Required libraries (for *Linux* I'm using Feren OS))
+### 1. Required libraries for *Linux*
    - libglew-dev
    - libglfw3-dev
    - libglm-dev
