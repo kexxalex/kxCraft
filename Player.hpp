@@ -39,7 +39,14 @@ private:
     bool canJump{false};
     bool isFlying{false};
 
-    void handleKeys(GLFWwindow *window, const double &dTime);
+    bool hasHeadingBlock{ false };
+    glm::fvec3 headingBlock{ 0, 0, 0};
+    glm::fvec3 buildBlock{ 0, 0, 0};
+
+    double lastAttack{0.0};
+    double lastBuild{0.0};
+
+    void handleKeys(GLFWwindow *window, const double &time, const double &dTime);
 
     [[nodiscard]] bool collide(float x, float y, float z) const;
 

@@ -17,7 +17,7 @@ Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
 
 void Player::update(GLFWwindow *window, const double &time, const double &dTime) {
 
-    handleKeys(window, dTime);
+    handleKeys(window, time, dTime);
 
     auto rotX = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.y), glm::fvec3(1, 0, 0));
     auto rotY = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.x), glm::fvec3(0, -1, 0));
@@ -46,18 +46,47 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
             position.z += dz;
 
     }
-
     velocity.y -= static_cast<float>(dTime)*2*9.81f;
 
     world->setPlayer(position, direction);
+
+    hasHeadingBlock = false;
+    for (int d = 3; d < 55; d++) {
+        headingBlock = getEyePosition() + direction * (0.1f * d);
+        if (world->getBlock(headingBlock.x, headingBlock.y, headingBlock.z).ID != AIR) {
+            buildBlock = getEyePosition() + direction * (0.1f * (d-1));
+            hasHeadingBlock = true;
+            break;
+        }
+    }
+
+    bool attack = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT);
+    if (hasHeadingBlock && attack && (time - lastAttack > 0.2)) {
+        lastAttack = time;
+        world->setBlock(headingBlock.x, headingBlock.y, headingBlock.z, AIR, true);
+    }
+    else if (!attack || !hasHeadingBlock)
+        lastAttack = 0.0;
+
+    bool build = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
+    if (hasHeadingBlock && build && (time - lastBuild > 0.2)) {
+        lastBuild = time;
+        world->setBlock(buildBlock.x, buildBlock.y, buildBlock.z, STONE, true);
+    }
+    else if (!build || !hasHeadingBlock)
+        lastBuild = 0.0;
 }
 
 void Player::addAngle(const glm::dvec2 &angle) {
     cameraAngle += angle * MOUSE_SPEED;
-    cameraAngle.y = glm::clamp(cameraAngle.y, -90.0, 85.0);
+    cameraAngle.y = glm::clamp(cameraAngle.y, -89.0, 89.0);
+    while (cameraAngle.x > 360.0)
+        cameraAngle.x -= 360.0;
+    while (cameraAngle.x < 0.0)
+        cameraAngle.x += 360.0;
 }
 
-void Player::handleKeys(GLFWwindow *window, const double &dTime) {
+void Player::handleKeys(GLFWwindow *window, const double &time, const double &dTime) {
     velocity.x = 0;
     velocity.z = 0;
     double angle = glm::radians(cameraAngle.x);
@@ -99,7 +128,6 @@ bool Player::collide(float x, float y, float z) const {
                 }
             }
         }
-
     }
 
     return false;

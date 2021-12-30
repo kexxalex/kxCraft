@@ -8,24 +8,41 @@
 #pragma once
 
 #include <libnoise/noise.h>
+#include "Block.hpp"
 
 
 static constexpr int C_EXTEND = 16;
 static constexpr int C_HEIGHT = 384;
-static constexpr unsigned char MAX_SUN_LIGHT = 15;
-static constexpr unsigned char NO_LIGHT = 0xFF;
+static constexpr unsigned char MAX_LIGHT = 15;
+static constexpr unsigned char LIGHT_MASK = 0b00001111; // 15
 
 struct st_block {
     short ID{ 0 };
-    unsigned char sunLight{ 0 };
-    unsigned char torchLight{ 0 };
 
-    [[nodiscard]] inline unsigned char getSunLight() const noexcept { return (sunLight == NO_LIGHT) ? 0 : sunLight; }
-    [[nodiscard]] inline short getLight() const noexcept {
-        return (sunLight != NO_LIGHT && sunLight > torchLight) ? sunLight : torchLight;
+    st_block(short ID=BLOCK_ID::AIR, unsigned char sunLight = 0, unsigned char torchLight = 0)
+        : ID(ID), light(0)
+    {
+        light = ((torchLight & LIGHT_MASK) << 4) | (sunLight & LIGHT_MASK);
     }
+
+    [[nodiscard]] inline unsigned char getTorchLight() const { return (light >> 4) & LIGHT_MASK; }
+    [[nodiscard]] inline unsigned char getSunLight() const { return light & LIGHT_MASK; }
+    [[nodiscard]] inline short getLight() const {
+        return (getSunLight() > getTorchLight()) ? getSunLight() : getTorchLight();
+    }
+
+    inline void setTorchLight(unsigned char torchLight) {
+        light = ((torchLight & LIGHT_MASK) << 4) | (light & LIGHT_MASK);
+    }
+    inline void setSunLight(unsigned char sunLight) {
+        light = light & (LIGHT_MASK << 4) | (sunLight & LIGHT_MASK);
+    }
+
+private:
+    unsigned char light{ 0 }; // 0bTTTTSSSS -- (LittleEndian) first 4 bit for sunlight, next 4 bit for torch light
+
 };
-static st_block AIR_BLOCK{ 0, NO_LIGHT, 0 };
+static st_block AIR_BLOCK{ 0};
 
 inline int linearizeCoord(int x, int y, int z) {
     return (z * C_EXTEND + x) * C_HEIGHT + y;
@@ -45,4 +62,5 @@ private:
     noise::module::Billow mountainNoise;
     noise::module::Perlin meadowNoise;
     noise::module::Perlin caveNoise;
+    noise::module::Perlin oreNoise;
 };

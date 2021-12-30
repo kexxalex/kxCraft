@@ -70,21 +70,19 @@ public:
             m_west->setEast(this, true);
     }
 
+    bool chunkBufferUpdate();
+
     [[nodiscard]] inline bool needUpdate() const noexcept { return m_needUpdate; }
     [[nodiscard]] inline bool isGenerated() const noexcept { return m_generated; }
+    [[nodiscard]] const Block& getBlockAttributes(int x, int y, int z) const { return BLOCKS[getBlock(x, y, z).ID]; }
     [[nodiscard]] inline const bool& isTransparent(int x, int y, int z) const {
-        return BLOCKS[getBlock(x, y, z).ID].transparent;
+        return getBlockAttributes(x, y, z).transparent;
     }
 
     [[nodiscard]] inline glm::ivec2 getXZPosition() const noexcept { return {m_position.x, m_position.z}; }
     [[nodiscard]] const st_block& getBlock(int x, int y, int z) const;
 
-    inline void setBlock(int x, int y, int z, unsigned char block = AIR) {
-        if (block != m_blocks[linearizeCoord(x, y, z)].ID) {
-            m_needUpdate = true;
-            m_blocks[linearizeCoord(x, y, z)].ID = block;
-        }
-    }
+    short setBlock(int x, int y, int z, short block = AIR, bool forceUpdate=false);
 
 
 private:
@@ -101,6 +99,7 @@ private:
 
     void addFace(short ID, const glm::fvec3 &pos, const glm::fvec3 &edgeA, const glm::fvec3 &edgeB);
     void addCube(int x, int y, int z, short block);
+    void addCross(int x, int y, int z, short block);
     void fillSunlight();
     void updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updateBlocks);
 

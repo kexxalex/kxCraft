@@ -1,5 +1,6 @@
 #include "BMP.hpp"
 #include <fstream>
+#include <iostream>
 
 static constexpr unsigned char BMP_CHECK[]{'B', 'M'};
 
@@ -32,7 +33,10 @@ BMP::BMP(const char *n, bool &isOK)
     bmp_file.close();
 }
 
-BMP::~BMP() { delete[] data; }
+BMP::~BMP() {
+    std::cout << "[  INFO  ][Bitmap ] Delete Bitmap " << name << std::endl;
+    delete[] data;
+}
 
 const char *BMP::getData() const noexcept {
     if (!isBitmap()) {

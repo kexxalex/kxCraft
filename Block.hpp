@@ -11,11 +11,8 @@ enum TEX_ID {
     T_AIR = 0,
     T_GRASS_TOP = 1, T_STONE, T_DIRT, T_GRASS_SIDE, T_WOOD_PLANKS,
     T_COBBLESTONE = 17, T_BEDROCK,
-    T_GOLD_ORE = 33, T_IRON_ORE, T_COAL_ROE
-};
-
-enum BLOCK_ID {
-    AIR, GRASS, STONE, DIRT, WOOD_PLANKS
+    T_GOLD_ORE = 33, T_IRON_ORE, T_COAL_ROE,
+    T_TALL_GRASS = 40
 };
 
 enum RENDER_TYPE { R_BLOCK, R_CROSS };
@@ -60,17 +57,12 @@ static Block BLOCKS[]{
         {"Stone",       T_STONE},
         {"Dirt",        T_DIRT},
         {"Wood Planks", T_WOOD_PLANKS},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
-        {},
         {"Cobblestone", T_COBBLESTONE},
-        {"Bedrock",     T_BEDROCK}
+        {"Bedrock",     T_BEDROCK},
+        {"Tall Grass",  T_TALL_GRASS, true, false, false, R_CROSS},
+
+};
+
+enum BLOCK_ID {
+    AIR, GRASS, STONE, DIRT, WOOD_PLANKS, COBBLESTONE, BEDROCK, TALL_GRASS
 };

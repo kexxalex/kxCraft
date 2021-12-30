@@ -10,17 +10,42 @@
 #include <GLFW/glfw3.h>
 
 
-static const float CLIP_ANGLE = glm::cos(glm::radians(50.0f));
+static const float CLIP_ANGLE = glm::cos(glm::radians(40.0f));
 
 
 World::~World() {
-    chunks.clear();
+    cleanUp();
 }
 
 World::World(const glm::fvec3 &start_position, int seed, int renderDistance, int threadCount)
         : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed), chunks(4 * renderDistance * renderDistance), playerPosition(start_position)
 {
 
+}
+
+void World::cleanUp() {
+    chunks.clear();
+}
+
+const st_block &World::getBlock(float x, float y, float z) const {
+    const glm::ivec2 chunkPos = glm::ivec2(
+            glm::floor(x / C_EXTEND),
+            glm::floor(z / C_EXTEND)
+    ) * C_EXTEND;
+    glm::ivec2 inner(glm::floor(x - chunkPos.x), glm::floor(z - chunkPos.y));
+    return (y < 0 || y >= C_HEIGHT || chunks.find(chunkPos) == chunks.end()) ?
+           AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
+}
+
+short World::setBlock(float x, float y, float z, short ID, bool forceChunkUpdate) {
+    const glm::ivec2 chunkPos = glm::ivec2(
+            glm::floor(x / C_EXTEND),
+            glm::floor(z / C_EXTEND)
+    ) * C_EXTEND;
+    glm::ivec2 inner(glm::floor(x - chunkPos.x), glm::floor(z - chunkPos.y));
+
+    return (y < 0 || y >= C_HEIGHT || chunks.find(chunkPos) == chunks.end()) ?
+           (short)AIR : chunks.at(chunkPos).setBlock(inner.x, (int) y, inner.y, ID, forceChunkUpdate);
 }
 
 void World::update(int threadID) {
@@ -91,7 +116,7 @@ void World::updateChunk(const glm::ivec2 &position) {
         return;
 
     glm::fvec2 sideA = glm::normalize(glm::fvec2(playerDirection.x, playerDirection.z));
-    glm::fvec2 sideB = glm::normalize(glm::fvec2(position - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 2.0f * sideA * (float) C_EXTEND);
+    glm::fvec2 sideB = glm::normalize(glm::fvec2(position - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 4.0f * sideA * (float) C_EXTEND);
     float angle = glm::dot(sideA, sideB);
 
 
@@ -138,7 +163,6 @@ void World::render(){
     rmChunks.clear();
     int availableChanges = CHANGE_CHUNK_MAX;
 
-    chunkLock.lock();
     for (auto &chunk: chunks) {
         auto delta = glm::fvec2(chunk.first - chunkPos) / (float)C_EXTEND;
         bool outOfRange = glm::dot(delta, delta) > static_cast<float>(renderDistance*renderDistance) + 1;
@@ -150,7 +174,7 @@ void World::render(){
             continue;
 
         glm::fvec2 sideA = glm::normalize(glm::fvec2(playerDirection.x, playerDirection.z));
-        glm::fvec2 sideB = glm::normalize(glm::fvec2(chunk.first - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 2.0f * sideA * (float) C_EXTEND);
+        glm::fvec2 sideB = glm::normalize(glm::fvec2(chunk.first - chunkPos) + glm::fvec2(C_EXTEND * 0.5) + 4.0f * sideA * (float) C_EXTEND);
         float angle = glm::dot(sideA, sideB);
 
         if (angle > CLIP_ANGLE) { // || angle < glm::cos(65.0f * 0.5f))
@@ -158,10 +182,12 @@ void World::render(){
         }
     }
 
-    for (glm::ivec2 &rmChunk: rmChunks) {
-        chunks.erase(rmChunk);
+    if (chunkLock.try_lock()) {
+        for (glm::ivec2 &rmChunk: rmChunks) {
+            chunks.erase(rmChunk);
+        }
+        chunkLock.unlock();
     }
-    chunkLock.unlock();
 }
 
 void World::reloadCurrentChunk() {

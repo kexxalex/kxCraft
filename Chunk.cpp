@@ -6,7 +6,6 @@
  */
 
 #include "Chunk.hpp"
-#include "Block.hpp"
 #include <GL/glew.h>
 #include <iostream>
 
@@ -169,6 +168,38 @@ void Chunk::addCube(int x, int y, int z, short block) {
                 glm::fvec3(0, 1, 0));
 }
 
+void Chunk::addCross(int x, int y, int z, short block) {
+    bool t(getBlockAttributes(x, y + 1, z).transparent);
+    bool b(getBlockAttributes(x, y - 1, z).transparent);
+    bool n(getBlockAttributes(x, y, z + 1).transparent);
+    bool e(getBlockAttributes(x + 1, y, z).transparent);
+    bool s(getBlockAttributes(x, y, z - 1).transparent);
+    bool w(getBlockAttributes(x - 1, y, z).transparent);
+
+    if (!(t || b || n || e || s || w))
+        return;
+
+    short texID = BLOCKS[block].top;
+
+    addFace(texID, glm::fvec3(x, y, z),
+            glm::fvec3(1, 0, 1),
+            glm::fvec3(0, 1, 0)
+    );
+    addFace(texID, glm::fvec3(x, y, z+1),
+            glm::fvec3(1, 0, -1),
+            glm::fvec3(0, 1, 0)
+    );
+
+    addFace(texID, glm::fvec3(x+1, y, z+1),
+            glm::fvec3(-1, 0, -1),
+            glm::fvec3(0, 1, 0)
+    );
+    addFace(texID, glm::fvec3(x+1, y, z),
+            glm::fvec3(-1, 0, 1),
+            glm::fvec3(0, 1, 0)
+    );
+}
+
 void Chunk::update() {
     if (!chunkDestructionLock.try_lock())
         return;
@@ -202,6 +233,7 @@ void Chunk::update() {
                         addCube(x, y, z, block.ID);
                         break;
                     case R_CROSS:
+                        addCross(x, y, z, block.ID);
                         break;
                 }
             }
@@ -228,6 +260,25 @@ void Chunk::initializeVertexArray() {
     glEnableVertexArrayAttrib(vaoID, 1);
 }
 
+bool Chunk::chunkBufferUpdate() {
+    m_hasVertexUpdate = false;
+    vertexCount = static_cast<int>(m_vertices.size());
+
+    if (vertexCount == 0) {
+        return false;
+    }
+
+    int newBufferSize = static_cast<int>(vertexCount * sizeof(glm::fvec4));
+    if (newBufferSize <= currentBufferSize) {
+        glNamedBufferSubData(vboID, 0, newBufferSize, &m_vertices[0].position.x);
+    } else {
+        glNamedBufferData(vboID, newBufferSize, &m_vertices[0].position.x, GL_STATIC_DRAW);
+        currentBufferSize = newBufferSize;
+    }
+
+    return true;
+}
+
 void Chunk::render(int &availableChanges) {
     if (!m_generated)
         return;
@@ -236,20 +287,8 @@ void Chunk::render(int &availableChanges) {
 
     if (availableChanges > 0 && m_hasVertexUpdate) {
         availableChanges--;
-        m_hasVertexUpdate = false;
-        vertexCount = static_cast<int>(m_vertices.size());
-
-        if (vertexCount == 0) {
+        if (!chunkBufferUpdate())
             return;
-        }
-
-        int newBufferSize = static_cast<int>(vertexCount * sizeof(glm::fvec4));
-        if (newBufferSize <= currentBufferSize) {
-            glNamedBufferSubData(vboID, 0, newBufferSize, &m_vertices[0].position.x);
-        } else {
-            glNamedBufferData(vboID, newBufferSize, &m_vertices[0].position.x, GL_STATIC_DRAW);
-            currentBufferSize = newBufferSize;
-        }
     }
 
     if (vertexCount > 0) {
@@ -262,7 +301,7 @@ void Chunk::fillSunlight() {
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
             for (int y = C_HEIGHT-1; y >= 0 && m_blocks[linearizeCoord(x, y, z)].ID == AIR; y--) {
-                m_blocks[linearizeCoord(x, y, z)].sunLight = MAX_SUN_LIGHT;
+                m_blocks[linearizeCoord(x, y, z)].setSunLight(MAX_LIGHT);
             }
         }
     }
@@ -290,20 +329,20 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
             )
     );
 
-    if (current.ID == BLOCK_ID::AIR && maxSunLight > current.sunLight + 1) {
-        current.sunLight = maxSunLight - 1;
+    if (current.ID == BLOCK_ID::AIR && maxSunLight > current.getSunLight() + 1) {
+        current.setSunLight(maxSunLight - 1);
 
         bool inBounds = (x > 0 && y > 0 & z > 0 && x+1 < C_EXTEND && z+1 < C_EXTEND && y+1 < C_HEIGHT);
 
-        if (t.sunLight != NO_LIGHT && glm::abs(t.sunLight - current.sunLight) > 1 && inBounds)
+        if (glm::abs(t.getSunLight() - current.getSunLight()) > 1 && inBounds)
         {
             updateBlocks.emplace_back(x, y+1, z);
         }
-        if (b.sunLight != NO_LIGHT && glm::abs(b.sunLight - current.sunLight) > 1 && inBounds) {
+        if (glm::abs(b.getSunLight() - current.getSunLight()) > 1 && inBounds) {
             updateBlocks.emplace_back(x, y-1, z);
         }
 
-        if (n.sunLight != NO_LIGHT && glm::abs(n.sunLight - current.sunLight) > 1) {
+        if (glm::abs(n.getSunLight() - current.getSunLight()) > 1) {
             if (inBounds)
                 updateBlocks.emplace_back(x, y, z+1);
             else {
@@ -311,7 +350,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_north->m_needUpdate = true;
             }
         }
-        if (e.sunLight != NO_LIGHT && glm::abs(e.sunLight - current.sunLight) > 1 && inBounds) {
+        if (glm::abs(e.getSunLight() - current.getSunLight()) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x+1, y, z);
             else {
@@ -319,7 +358,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_east->m_needUpdate = true;
             }
         }
-        if (s.sunLight != NO_LIGHT && glm::abs(s.sunLight - current.sunLight) > 1 && inBounds) {
+        if (glm::abs(s.getSunLight() - current.getSunLight()) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x, y, z-1);
             else {
@@ -327,7 +366,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
                     m_south->m_needUpdate = true;
             }
         }
-        if (w.sunLight != NO_LIGHT && glm::abs(w.sunLight - current.sunLight) > 1 && inBounds) {
+        if (glm::abs(w.getSunLight() - current.getSunLight()) > 1 && inBounds) {
             if (inBounds)
                 updateBlocks.emplace_back(x-1, y, z);
             else {
@@ -336,4 +375,53 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
             }
         }
     }
+}
+
+short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
+    short oldID = m_blocks[linearizeCoord(x, y, z)].ID;
+    if (block != oldID) {
+        m_blocks[linearizeCoord(x, y, z)].ID = block;
+        if (!(block == DIRT || block == GRASS) && getBlock(x, y+1, z).ID == TALL_GRASS) {
+            m_blocks[linearizeCoord(x, y+1, z)].ID = AIR;
+        }
+        if (forceUpdate) {
+            update();
+            chunkBufferUpdate();
+        }
+
+        if (z == C_EXTEND-1 && nullptr != m_north) {
+            if (forceUpdate) {
+                m_north->update();
+                m_north->chunkBufferUpdate();
+            }
+            else
+                m_north->m_needUpdate = true;
+        }
+        if (x == C_EXTEND-1 && nullptr != m_east) {
+            if (forceUpdate) {
+                m_east->update();
+                m_east->chunkBufferUpdate();
+            }
+            else
+                m_east->m_needUpdate = true;
+        }
+        if (z == 0 && nullptr != m_south) {
+            if (forceUpdate) {
+                m_south->update();
+                m_south->chunkBufferUpdate();
+            }
+            else
+                m_south->m_needUpdate = true;
+        }
+        if (x == 0 && nullptr != m_west) {
+            if (forceUpdate) {
+                m_west->update();
+                m_west->chunkBufferUpdate();
+            }
+            else
+                m_west->m_needUpdate = true;
+        }
+    }
+
+    return oldID;
 }

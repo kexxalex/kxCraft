@@ -52,6 +52,7 @@ public:
     ~World();
 
     void update(int threadID);
+    void cleanUp();
 
     inline void setPlayer(const glm::fvec3 &position, const glm::fvec3 &direction) {
         playerPosition = position;
@@ -62,15 +63,9 @@ public:
 
     void setInactive() { m_active = false; }
 
-    const st_block &getBlock(float x, float y, float z) const {
-        const glm::ivec2 chunkPos = glm::ivec2(
-                glm::floor(x / C_EXTEND),
-                glm::floor(z / C_EXTEND)
-        ) * C_EXTEND;
-        glm::ivec2 inner(glm::floor(x - chunkPos.x), glm::floor(z - chunkPos.y));
-        return (y < 0 || y >= C_HEIGHT || chunks.find(chunkPos) == chunks.end()) ?
-               AIR_BLOCK : chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y);
-    };
+    short setBlock(float x, float y, float z, short ID, bool chunkUpdate=false);
+
+    const st_block &getBlock(float x, float y, float z) const;;
 
     void reloadCurrentChunk();
 

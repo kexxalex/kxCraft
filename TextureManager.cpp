@@ -29,8 +29,9 @@ std::shared_ptr<Texture> TextureManager::getTexture(unsigned int id) const {
 }
 
 void TextureManager::clear() {
+    std::cout << "[  INFO  ][TEX_MGR] Clearing Textures." << std::endl;
     for (const auto &pair: m_texture_id) {
-        m_free_ids.emplace_back(pair.first);
+        m_free_ids.push_back(pair.first);
     }
 
     m_texture_id.clear();

@@ -25,6 +25,7 @@ static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
 static bool VSYNC = true;
+static int THREAD_COUNT = 1;
 static World WORLD;
 static Player PLAYER;
 
@@ -83,7 +84,7 @@ void worldUpdaterThread(int thrID) {
 }
 
 
-void render() {
+void render(Shader* terrainShader) {
     static double lastFPS = glfwGetTime();
     static int frames{0};
     static glm::fvec3 up(0, 1, 0);
@@ -92,8 +93,7 @@ void render() {
             1.0f * WIDTH / HEIGHT,
             0.03f, 1024.0f);
 
-    static Shader *shader = SHADER_MANAGER.getDefault().get();
-    shader->Bind();
+    terrainShader->Bind();
 
     static double lastFrame = glfwGetTime();
     double time = glfwGetTime();
@@ -105,9 +105,11 @@ void render() {
     PLAYER.update(WINDOW, time, dTime);
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
-    shader->setMatrixFloat4("MVP", MVP);
-    shader->setFloat3("PLAYER_POSITION", PLAYER.getPosition());
-    shader->setFloat("TIME", (float)time);
+    terrainShader->setMatrixFloat4("MVP", MVP);
+    terrainShader->setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
+    terrainShader->setFloat("TIME", (float)time);
+    terrainShader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+    terrainShader->setBool("DISTANCE_CULLING", false);
 
     WORLD.render();
 
@@ -142,26 +144,24 @@ int main() {
 
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
-    static auto shader = SHADER_MANAGER.getDefault().get();
+    static auto terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain").get();
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture(
             "./res/terrain.bmp", false, false
     );
 
-    shader->Bind();
+    terrainShader->Bind();
     DIFFUSE->BindTo(0);
 
-    constexpr int thread_count = 2;
-    WORLD = World({0, 0, 0}, 255, 16, thread_count);
-    std::thread worldUpdater[thread_count];
+    WORLD = World({0, 0, 0}, 5435, 8, THREAD_COUNT);
+    std::thread worldUpdater[THREAD_COUNT];
 
-    float y = 255.0f;
+    float y = C_HEIGHT;
     while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
         y--;
     }
     PLAYER = Player(&WORLD, {0, y + 1.1f, 0}, {0.6f, 1.8f, 0.6f});
-    shader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
 
-    for (int i = 0; i < thread_count; i++) {
+    for (int i = 0; i < THREAD_COUNT; i++) {
         worldUpdater[i] = std::thread(worldUpdaterThread, i);
     }
 
@@ -169,7 +169,7 @@ int main() {
     glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
 
     while (!glfwWindowShouldClose(WINDOW)) {
-        render();
+        render(terrainShader);
         glfwPollEvents();
 
         glm::dvec2 mouse;
