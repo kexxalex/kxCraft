@@ -40,8 +40,9 @@ bool loadShaderProgram(const std::string&& filename, GLint shaderType, GLuint &s
 }
 
 
-Shader::Shader(const char *shaderPath, bool &isOK)
-        : shaderName(shaderPath) {
+Shader::Shader(std::string_view shaderPath, bool &isOK)
+    : shaderName(shaderPath)
+{
     isOK = Load();
 }
 
@@ -98,51 +99,51 @@ bool Shader::Load() noexcept {
     return true;
 }
 
-void Shader::setBool(const char *name, bool value) noexcept {
+void Shader::setBool(std::string_view name, bool value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform1i(uniforms[name], (int) value);
 }
 
-void Shader::setInt(const char *name, int value) noexcept {
+void Shader::setInt(std::string_view name, int value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform1i(uniforms[name], value);
 }
 
-void Shader::setFloat(const char *name, float value) noexcept {
+void Shader::setFloat(std::string_view name, float value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform1f(uniforms[name], value);
 }
 
-void Shader::setDouble(const char *name, double value) noexcept {
+void Shader::setDouble(std::string_view name, double value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform1d(uniforms[name], value);
 }
 
-void Shader::setFloat3(const char *name, const glm::fvec3 &value) noexcept {
+void Shader::setFloat3(std::string_view name, const glm::fvec3 &value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform3fv(uniforms[name], 1, &value.x);
 }
 
-void Shader::setDouble3(const char *name, const glm::dvec3 &value) noexcept {
+void Shader::setDouble3(std::string_view name, const glm::dvec3 &value) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniform3dv(uniforms[name], 1, &value.x);
 }
 
-void Shader::setMatrixFloat4(const char *name, const glm::fmat4 &matrix) noexcept {
+void Shader::setMatrixFloat4(std::string_view name, const glm::fmat4 &matrix) noexcept {
     if (uniforms.find(name) == uniforms.end())
-        uniforms[name] = glGetUniformLocation(programID, name);
+        uniforms[name] = glGetUniformLocation(programID, name.data());
 
     glUniformMatrix4fv(uniforms[name], 1, GL_FALSE, &matrix[0].x);
 }
@@ -150,7 +151,7 @@ void Shader::setMatrixFloat4(const char *name, const glm::fmat4 &matrix) noexcep
 Shader::~Shader() {
     std::cout << "[  INFO  ][Shader ] Delete Shader: " << shaderName << '(' << programID << ')' << std::endl;
 
-    Release();
+    glUseProgram(0);
     glDeleteProgram(programID);
     uniforms.clear();
 }

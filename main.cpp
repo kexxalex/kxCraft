@@ -24,7 +24,7 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = false;
+static constexpr bool VSYNC = true;
 static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
@@ -35,10 +35,10 @@ static Player PLAYER;
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
         SHADER_MANAGER.reloadAll();
-        Shader* shader = SHADER_MANAGER.getDefault().get();
-        shader->Bind();
-        shader->setInt("DIFFUSE", 0);
-        shader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+        Shader& shader = SHADER_MANAGER.getDefault();
+        shader.Bind();
+        shader.setInt("DIFFUSE", 0);
+        shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
     }
     if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
         WORLD.reloadCurrentChunk();
@@ -88,7 +88,9 @@ void worldUpdaterThread(int thrID) {
 }
 
 
-void render(Shader* terrainShader) {
+void render() {
+    static Shader &terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain");
+
     static double lastFPS = glfwGetTime();
     static int frames{0};
     static glm::fvec3 up(0, 1, 0);
@@ -97,7 +99,7 @@ void render(Shader* terrainShader) {
             1.0f * WIDTH / HEIGHT,
             0.03f, 1024.0f);
 
-    terrainShader->Bind();
+    terrainShader.Bind();
 
     static double lastFrame = glfwGetTime();
     double time = glfwGetTime();
@@ -109,11 +111,11 @@ void render(Shader* terrainShader) {
     PLAYER.update(WINDOW, time, dTime);
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
-    terrainShader->setMatrixFloat4("MVP", MVP);
-    terrainShader->setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
-    terrainShader->setFloat("TIME", (float)time);
-    terrainShader->setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
-    terrainShader->setBool("DISTANCE_CULLING", false);
+    terrainShader.setMatrixFloat4("MVP", MVP);
+    terrainShader.setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
+    terrainShader.setFloat("TIME", (float)time);
+    terrainShader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+    terrainShader.setBool("DISTANCE_CULLING", false);
 
     WORLD.render(terrainShader);
 
@@ -148,7 +150,8 @@ int main() {
 
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
-    static auto terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain").get();
+
+    static Shader& terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain");
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
@@ -183,7 +186,7 @@ int main() {
 
 
     while (!glfwWindowShouldClose(WINDOW)) {
-        render(terrainShader);
+        render();
         glfwPollEvents();
 
         glm::dvec2 mouse;

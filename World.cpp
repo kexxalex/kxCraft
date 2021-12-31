@@ -6,7 +6,8 @@
  */
 
 #include "World.hpp"
-
+#include <GLFW/glfw3.h>
+#include <iostream>
 
 
 static const float CLIP_ANGLE = glm::cos(glm::radians(45.0f));
@@ -146,7 +147,7 @@ void World::forcePushBuffer() {
         chunk.second.chunkBufferUpdate();
 }
 
-void World::render(Shader *shader){
+void World::render(Shader &shader){
     glm::ivec2 playerChunkPosition;
     toChunkPosition(playerPosition, playerChunkPosition);
 
@@ -154,6 +155,7 @@ void World::render(Shader *shader){
     rmChunks.clear();
     int availableChanges = CHANGE_CHUNK_MAX;
 
+    double t0 = glfwGetTime();
     for (auto &chunk: chunks) {
         auto deltaPlayerChunk = glm::fvec2(chunk.first - playerChunkPosition) / (float)C_EXTEND;
         bool outOfRange = glm::dot(deltaPlayerChunk, deltaPlayerChunk) > static_cast<float>(renderDistance*renderDistance) + 1;
@@ -172,6 +174,7 @@ void World::render(Shader *shader){
             chunk.second.render(availableChanges, shader);
         }
     }
+    std::cout << (glfwGetTime() - t0) * 1000.0 << std::endl;
 
     if (chunkLock.try_lock()) {
         for (glm::ivec2 &rmChunk: rmChunks) {

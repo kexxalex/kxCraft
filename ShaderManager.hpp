@@ -3,21 +3,26 @@
 
 #include "Shader.hpp"
 #include <vector>
-#include <memory>
 
 
 class ShaderManager {
 public:
+    void initialize() {
+        bool isOK;
+        m_default = Shader("./res/shader/default", isOK);
+    }
+
+    ShaderManager() = default;
+    ShaderManager(const ShaderManager &shaderManager) = default;
     ~ShaderManager();
 
-    void initialize();
     void reloadAll();
 
-    std::shared_ptr<Shader> getShader(const char *name) noexcept;
-    std::shared_ptr<Shader> &getDefault() noexcept { return m_default; }
+    [[nodiscard]] Shader &getShader(std::string_view name) noexcept;
+    [[nodiscard]] Shader &getDefault() noexcept { return m_default; }
 
 private:
-    std::shared_ptr<Shader> m_default{nullptr};
-    std::vector<std::shared_ptr<Shader>> shaders = {};
-    std::unordered_map<const char *, unsigned int> shaderHash;
+    Shader m_default;
+    std::vector<Shader> shaders;
+    std::unordered_map<std::string_view, unsigned int> shaderNameIndex;
 };

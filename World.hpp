@@ -59,7 +59,7 @@ public:
         playerDirection = direction;
     }
 
-    void render(Shader *shader);
+    void render(Shader &shader);
 
     void setInactive() { m_active = false; }
 

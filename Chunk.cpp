@@ -282,7 +282,7 @@ bool Chunk::chunkBufferUpdate() {
     return true;
 }
 
-void Chunk::render(int &availableChanges, Shader *shader) {
+void Chunk::render(int &availableChanges, Shader &shader) {
     if (!m_generated)
         return;
 
@@ -293,7 +293,7 @@ void Chunk::render(int &availableChanges, Shader *shader) {
     }
 
     if (vertexCount > 0) {
-        shader->setFloat3("CHUNK_POSITION", m_position);
+        shader.setFloat3("CHUNK_POSITION", m_position);
         glBindVertexArray(vaoID);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
