@@ -71,6 +71,8 @@ public:
 
     void forcePushBuffer();
 
+    void initializeVertexArray();
+
     [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }
 
@@ -94,6 +96,9 @@ private:
 
     glm::fvec3 playerPosition{0, 0, 0};
     glm::fvec3 playerDirection{0, 0, 1};
+    unsigned int vaoID{0};
+
+    std::vector<glm::ivec2> removeChunks{CHANGE_CHUNK_MAX};
 
     WorldGenerator worldGenerator;
     std::mutex chunkLock;

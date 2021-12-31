@@ -34,9 +34,6 @@ Chunk::~Chunk() {
     if (vboID != 0) {
         glDeleteBuffers(1, &vboID);
     }
-    if (vaoID != 0) {
-        glDeleteVertexArrays(1, &vaoID);
-    }
 
     if (nullptr != m_north) {
         m_north->m_south = nullptr;
@@ -246,23 +243,9 @@ void Chunk::update() {
     chunkDestructionLock.unlock();
 }
 
-void Chunk::initializeVertexArray() {
-    glCreateVertexArrays(1, &vaoID);
-    glCreateBuffers(1, &vboID);
-
-    glVertexArrayVertexBuffer(vaoID, 0, vboID, 0, sizeof(st_vertex));
-    glVertexArrayVertexBuffer(vaoID, 1, vboID, 4, sizeof(st_vertex));
-
-    glVertexArrayAttribFormat(vaoID, 0, 4, GL_UNSIGNED_BYTE, GL_FALSE, 0);
-    glVertexArrayAttribFormat(vaoID, 1, 1, GL_SHORT, GL_FALSE, 0);
-
-    glEnableVertexArrayAttrib(vaoID, 0);
-    glEnableVertexArrayAttrib(vaoID, 1);
-}
-
 bool Chunk::chunkBufferUpdate() {
-    if (vaoID == 0 && vboID == 0)
-        initializeVertexArray();
+    if (vboID == 0)
+        glCreateBuffers(1, &vboID);
     m_hasVertexUpdate = false;
 
     vertexCount = static_cast<int>(m_vertices.size());
@@ -294,7 +277,6 @@ void Chunk::render(int &availableChanges, Shader &shader) {
 
     if (vertexCount > 0) {
         shader.setFloat3("CHUNK_POSITION", m_position);
-        glBindVertexArray(vaoID);
         glDrawArrays(GL_TRIANGLES, 0, vertexCount);
     }
 }

@@ -86,6 +86,11 @@ public:
     short setBlock(int x, int y, int z, short block = AIR, bool forceUpdate=false);
 
 
+
+    unsigned int vboID{0};
+
+
+
 private:
     st_block m_blocks[C_EXTEND * C_EXTEND * C_HEIGHT];
 
@@ -113,8 +118,6 @@ private:
 
     int vertexCount{0};
     int currentBufferSize{0};
-    unsigned int vaoID{0};
-    unsigned int vboID{0};
 
     std::vector<st_vertex> m_vertices;
 };

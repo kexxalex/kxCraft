@@ -35,10 +35,11 @@ static Player PLAYER;
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
         SHADER_MANAGER.reloadAll();
-        Shader& shader = SHADER_MANAGER.getDefault();
+        Shader& shader = SHADER_MANAGER.getShader("./res/shader/terrain");
         shader.Bind();
         shader.setInt("DIFFUSE", 0);
         shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+        shader.setBool("DISTANCE_CULLING", false);
     }
     if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
         WORLD.reloadCurrentChunk();
@@ -99,8 +100,6 @@ void render() {
             1.0f * WIDTH / HEIGHT,
             0.03f, 1024.0f);
 
-    terrainShader.Bind();
-
     static double lastFrame = glfwGetTime();
     double time = glfwGetTime();
     double dTime = time - lastFrame;
@@ -109,13 +108,13 @@ void render() {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     PLAYER.update(WINDOW, time, dTime);
+
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
+
     terrainShader.setMatrixFloat4("MVP", MVP);
     terrainShader.setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
     terrainShader.setFloat("TIME", (float)time);
-    terrainShader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
-    terrainShader.setBool("DISTANCE_CULLING", false);
 
     WORLD.render(terrainShader);
 
@@ -155,7 +154,7 @@ int main() {
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 4562, 20, THREAD_COUNT);
+    WORLD = World({0, 0, 0}, 35987, 20, THREAD_COUNT);
     std::thread worldUpdater[THREAD_COUNT];
     float y = C_HEIGHT;
     while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
@@ -184,6 +183,7 @@ int main() {
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
 
+    terrainShader.Bind();
 
     while (!glfwWindowShouldClose(WINDOW)) {
         render();
