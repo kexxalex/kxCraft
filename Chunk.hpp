@@ -16,7 +16,7 @@
 #include "WorldGenerator.hpp"
 #include "Shader.hpp"
 
-static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 32768;
+static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 16384;
 
 
 
@@ -73,14 +73,14 @@ public:
             m_west->setEast(this, true);
     }
 
-    inline void setBufferOffset(unsigned int VBO, int bufferOffset) {
+    inline void setBufferOffset(unsigned int VBO, unsigned int bufferOffset) {
         vboID = VBO;
         offset = bufferOffset;
     }
 
-    int chunkBufferUpdate(int &availableChanges, unsigned int oboID);
+    unsigned int chunkBufferUpdate(int &availableChanges, unsigned int oboID);
 
-    [[nodiscard]] inline int getVertexCount() const noexcept { return vertexCount; }
+    [[nodiscard]] inline unsigned int getVertexCount() const noexcept { return vertexCount; }
     [[nodiscard]] inline bool needUpdate() const noexcept { return m_needUpdate; }
     [[nodiscard]] inline bool needBufferUpdate() const noexcept { return m_hasVertexUpdate; }
     [[nodiscard]] inline bool isGenerated() const noexcept { return m_generated; }
@@ -116,14 +116,13 @@ private:
     WorldGenerator *m_worldGenerator{ nullptr };
 
     bool m_hasVertexUpdate{ false };
-    int offset{ 0 };
+    unsigned int offset{ 0 };
 
-    std::mutex vertexLock;
-    std::mutex chunkDestructionLock;
-
-    int vertexCount{0};
+    unsigned int vertexCount{0};
     unsigned int vboID{ 0 };
 
     std::vector<st_vertex> m_vertices;
+
+    std::mutex chunkDestructionLock;
 };
 

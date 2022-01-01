@@ -25,7 +25,7 @@ static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
 static constexpr bool VSYNC = false;
-static constexpr int THREAD_COUNT = 2;
+static constexpr int THREAD_COUNT = 1;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
 static Player PLAYER;
@@ -159,7 +159,7 @@ int main() {
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 4562, 20, THREAD_COUNT);
+    WORLD = World({0, 0, 0}, 4562, 16, THREAD_COUNT);
     WORLD.initializeVertexArray();
 
     std::thread worldUpdater[THREAD_COUNT];
@@ -167,7 +167,7 @@ int main() {
     while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
         y--;
     }
-    PLAYER = Player(&WORLD, {0, y + 1.1f, 0}, {0.6f, 1.8f, 0.6f});
+    PLAYER = Player(&WORLD, {0.5f, y + 1.0625f, 0.5f}, {0.6f, 1.8f, 0.6f});
 
     for (int i = 0; i < THREAD_COUNT; i++) {
         worldUpdater[i] = std::thread(worldUpdaterThread, i);

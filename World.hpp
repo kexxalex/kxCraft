@@ -14,7 +14,7 @@
 #include <iostream>
 
 
-static constexpr int CHANGE_CHUNK_MAX = 128;
+static constexpr int CHANGE_CHUNK_MAX = 4;
 
 inline int MOD(int n, int m) {
     return n % m + m * (n < 0);
@@ -31,7 +31,7 @@ struct st_DAIC {
 class World {
 public:
     World() = default;
-    World(const glm::fvec3 &start_position, int seed, int renderDistance = 4, int threadCount = 2);
+    World(const glm::fvec3 &start_position, int seed, unsigned int renderDistance = 4, unsigned int threadCount = 2);
 
     World &operator=(const World &world)
     {
@@ -96,8 +96,8 @@ private:
     }
 
     bool m_active{ true };
-    int renderDistance{ 6 };
-    int threadCount{ 1 };
+    unsigned int renderDistance{ 6 };
+    unsigned int threadCount{ 1 };
 
     WorldGenerator worldGenerator;
 
@@ -109,11 +109,9 @@ private:
     unsigned int oboID{ 0 };
     unsigned int iboID{ 0 };
 
-    int indirectCount{ 0 };
+    unsigned int indirectCount{ 0 };
     bool hasChunkBufferChanges{ false };
 
-    int maxWorldExtend{ 0 };
+    unsigned int maxWorldExtend{ 0 };
     Chunk* chunks{ nullptr };
-
-    std::mutex chunkLock;
 };

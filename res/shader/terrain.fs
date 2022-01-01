@@ -34,6 +34,6 @@ void main() {
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;
-    float fog = 1.0f - min(dot(delta, delta), 1.0f);
+    float fog = 1.0f - clamp(dot(delta, delta)*4.0 - 3.0, 0.0, 1.0f);
     outFragColor = mix(vec3(0.75, 0.9, 1.0), aLight*dLight * diffColor.rgb, fog);
 } 

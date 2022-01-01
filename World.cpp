@@ -25,7 +25,7 @@ constexpr glm::ivec2 tOffset[4] = {
 
 
 
-World::World(const glm::fvec3 &start_position, int seed, int renderDistance, int threadCount)
+World::World(const glm::fvec3 &start_position, int seed, unsigned int renderDistance, unsigned int threadCount)
     : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed), playerPosition(start_position),
       maxWorldExtend(2 * renderDistance + 3)
 {
@@ -78,8 +78,8 @@ void World::updateChunk(const glm::ivec2 &position) {
     Chunk &chunk = chunks[linearizeChunkPos(position)];
     glm::ivec2 cPos = chunk.getXZPosition();
     if (chunk.available || cPos != position) {
-        chunkLock.lock();
         chunk.build(&worldGenerator, position.x, position.y);
+        chunk.generate();
 
         const glm::ivec2 north = position + glm::ivec2(0, 1);
         const glm::ivec2 east = position + glm::ivec2(1, 0);
@@ -90,9 +90,6 @@ void World::updateChunk(const glm::ivec2 &position) {
         chunk.setEast(&chunks[linearizeChunkPos(east)]);
         chunk.setSouth(&chunks[linearizeChunkPos(south)]);
         chunk.setWest(&chunks[linearizeChunkPos(west)]);
-        chunkLock.unlock();
-
-        chunk.generate();
     }
 
     if (chunk.needUpdate()) {
@@ -106,10 +103,21 @@ void World::updateChunk(const glm::ivec2 &position) {
 void World::updateChunkBuffers() {
     hasChunkBufferChanges = false;
     int availableChanges = CHANGE_CHUNK_MAX;
+    unsigned int size = 0;
+    unsigned int maxUsage = 0;
+    unsigned int minUsage = CHUNK_BASE_VERTEX_OFFSET;
     for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
         Chunk &chunk = chunks[i];
-        chunk.chunkBufferUpdate(availableChanges, oboID);
+        unsigned int usage = chunk.chunkBufferUpdate(availableChanges, oboID);
+        size += usage;
+        if (usage > maxUsage)
+            maxUsage = usage;
+        if (usage > 0 && usage < minUsage)
+            minUsage = usage;
     }
+
+    //std::cout << size * sizeof(st_vertex) / 1024 / 1024 << "MB -- " << 100.0f * (float)size / (float)(maxWorldExtend * maxWorldExtend * CHUNK_BASE_VERTEX_OFFSET) << " %";
+    //std::cout << " (" << 100.0f * minUsage / CHUNK_BASE_VERTEX_OFFSET << " % <-> " << 100.0f * maxUsage / CHUNK_BASE_VERTEX_OFFSET << " %)" << std::endl;
 }
 
 void World::updateIndirect() {
@@ -119,7 +127,8 @@ void World::updateIndirect() {
     int indirectIndex = 0;
     auto indirect = (st_DAIC*)glMapNamedBuffer(iboID, GL_WRITE_ONLY);
 
-    for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
+
+    for (unsigned int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
         Chunk &chunk = chunks[i];
         unsigned int count = chunk.getVertexCount();
 
@@ -129,7 +138,7 @@ void World::updateIndirect() {
         float angle = glm::dot(sideA, sideB);
 
         if (count > 0 && angle > CLIP_ANGLE) {
-            indirect[indirectIndex++] = {count, 1, CHUNK_BASE_VERTEX_OFFSET * i, static_cast<unsigned int>(i)};
+            indirect[indirectIndex++] = {count, 1, CHUNK_BASE_VERTEX_OFFSET * i, i};
         }
     }
 

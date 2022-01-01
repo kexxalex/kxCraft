@@ -210,7 +210,6 @@ void Chunk::update() {
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
 
-    vertexLock.lock();
     m_needUpdate = false;
     m_vertices.clear();
 
@@ -234,18 +233,17 @@ void Chunk::update() {
     }
     chunkDestructionLock.unlock();
 
-    vertexLock.unlock();
     m_hasVertexUpdate = true;
 }
 
-int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
+unsigned int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
     if (!m_generated)
         return 0;
 
     if (!m_hasVertexUpdate)
         return vertexCount;
 
-    int newVertexCount = static_cast<int>(m_vertices.size());
+    auto newVertexCount = static_cast<unsigned int>(m_vertices.size());
     m_hasVertexUpdate = false;
 
     if (newVertexCount == 0) {
@@ -253,7 +251,7 @@ int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
         return 0;
     }
 
-    int segmentSize = static_cast<int>(newVertexCount * sizeof(st_vertex));
+    auto segmentSize = static_cast<unsigned int>(newVertexCount * sizeof(st_vertex));
     if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
         vertexCount = newVertexCount;
         availableChanges--;
