@@ -12,7 +12,7 @@
 
 
 static constexpr int C_EXTEND = 16;
-static constexpr int C_HEIGHT = 384;
+static constexpr int C_HEIGHT = 256;
 static constexpr unsigned char MAX_LIGHT = 15;
 static constexpr unsigned char LIGHT_MASK = 0b00001111; // 15
 
@@ -42,7 +42,8 @@ private:
     unsigned char light{ 0 }; // 0bTTTTSSSS -- (LittleEndian) first 4 bit for sunlight, next 4 bit for torch light
 
 };
-static st_block AIR_BLOCK{ 0};
+
+static st_block AIR_BLOCK(0);
 
 inline int linearizeCoord(int x, int y, int z) {
     return (z * C_EXTEND + x) * C_HEIGHT + y;

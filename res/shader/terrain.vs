@@ -2,8 +2,9 @@
 
 layout(location=0) in vec4 aPositionWithID;
 layout(location=1) in float aLight;
+layout(location=2) in vec3 aChunkPosition;
 
-uniform vec3 CHUNK_POSITION;
+uniform vec3 PLAYER_POSITION;
 
 out int vTexture;
 out int vLight;
@@ -11,5 +12,6 @@ out int vLight;
 void main() {
     vTexture = int(aPositionWithID.w);
     vLight = int(aLight);
-    gl_Position = vec4(CHUNK_POSITION + aPositionWithID.xyz, 1.0);
+
+    gl_Position = vec4(aChunkPosition * 16.0 + aPositionWithID.xyz, 1.0);
 }

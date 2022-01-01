@@ -19,8 +19,8 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
     handleKeys(window, time, dTime);
 
     auto rotX = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.y), glm::fvec3(1, 0, 0));
-    auto rotY = glm::rotate(rotX, glm::radians((float) cameraAngle.x), glm::fvec3(0, -1, 0));
-    direction = rotY[2];
+    auto rotY = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.x), glm::fvec3(0, -1, 0));
+    direction = (rotY*rotX)[2];
 
     if (glm::dot(velocity, velocity) > 0) {
         float dx = velocity.x * static_cast<float>(dTime) * MOVEMENT_SPEED;
@@ -50,8 +50,8 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
     world->setPlayer(position, direction);
 
     hasHeadingBlock = false;
-    for (int d = 1; d < 22; d++) {
-        headingBlock = getEyePosition() + direction * (0.25f * d);
+    for (int d = 3; d < 55; d++) {
+        headingBlock = getEyePosition() + direction * (0.1f * d);
         if (world->getBlock(headingBlock.x, headingBlock.y, headingBlock.z).ID != AIR) {
             buildBlock = getEyePosition() + direction * (0.1f * (d-1));
             hasHeadingBlock = true;

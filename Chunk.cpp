@@ -7,33 +7,30 @@
 
 #include "Chunk.hpp"
 #include <GL/glew.h>
+#include <iostream>
 
 
-
-Chunk::Chunk(WorldGenerator *worldGenerator, int x, int z)
-        : m_position(x, 0, z), m_worldGenerator(worldGenerator),
-          m_north{nullptr}, m_east{nullptr}, m_south{nullptr}, m_west{nullptr} {
-}
-
-Chunk &Chunk::operator=(const Chunk &c) {
-    m_worldGenerator = c.m_worldGenerator;
-    m_position = c.m_position;
-    return *this;
+void Chunk::build(WorldGenerator *worldGenerator, int x, int z)
+{
+    chunkDestructionLock.lock();
+    available = false;
+    m_needUpdate = true;
+    m_generated = false;
+    m_hasVertexUpdate = false;
+    vertexCount = 0;
+    m_position = glm::fvec3(x, 0, z);
+    m_worldGenerator = worldGenerator;
+    chunkDestructionLock.unlock();
 }
 
 Chunk::~Chunk() {
     chunkDestructionLock.lock();
     if (!m_generated)
         return;
-    // std::cout << "Delete Chunk " << m_position.x << ", " << m_position.z << " -- " << vaoID << std::endl;
+
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();
-
-    // Delete VAO and VBO
-    if (vboID != 0) {
-        glDeleteBuffers(1, &vboID);
-    }
 
     if (nullptr != m_north) {
         m_north->m_south = nullptr;
@@ -53,7 +50,7 @@ void Chunk::generate() {
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
             m_worldGenerator->placeStack(
-                    x + (int) m_position.x, z + (int) m_position.z,
+                    x + (int) m_position.x * C_EXTEND, z + (int) m_position.z * C_EXTEND,
                     &m_blocks[linearizeCoord(x, 0, z)]);
         }
     }
@@ -102,12 +99,10 @@ int Chunk::getCornerLight(int x, int y, int z) {
     const st_block& b010 = getBlock(x, y - 1, z-1);
     const st_block& b000 = getBlock(x-1, y - 1, z-1);
 
-    int totalLight = (
+    return (
             (b111.getLight() + b101.getLight() + b110.getLight() + b100.getLight() +
             b011.getLight() + b001.getLight() + b010.getLight() + b000.getLight())
     );
-
-    return static_cast<int>(totalLight);
 }
 
 void Chunk::addFace(short ID, const glm::ivec3 &pos,
@@ -197,7 +192,7 @@ void Chunk::addCross(int x, int y, int z, short block) {
 }
 
 void Chunk::update() {
-    if (!chunkDestructionLock.try_lock())
+    if (!m_generated || !chunkDestructionLock.try_lock())
         return;
 
     std::vector<glm::ivec3> updateBlocks;
@@ -216,6 +211,7 @@ void Chunk::update() {
     }
 
     vertexLock.lock();
+    m_needUpdate = false;
     m_vertices.clear();
 
     for (int z = 0; z < C_EXTEND; z++) {
@@ -236,49 +232,43 @@ void Chunk::update() {
             }
         }
     }
+    chunkDestructionLock.unlock();
 
-    m_needUpdate = false;
     vertexLock.unlock();
     m_hasVertexUpdate = true;
-    chunkDestructionLock.unlock();
 }
 
-bool Chunk::chunkBufferUpdate() {
-    if (vboID == 0)
-        glCreateBuffers(1, &vboID);
+int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
+    if (!m_generated)
+        return 0;
+
+    if (!m_hasVertexUpdate)
+        return vertexCount;
+
+    int newVertexCount = static_cast<int>(m_vertices.size());
     m_hasVertexUpdate = false;
 
-    vertexCount = static_cast<int>(m_vertices.size());
-
-    if (vertexCount == 0) {
-        return false;
+    if (newVertexCount == 0) {
+        vertexCount = 0;
+        return 0;
     }
 
-    int newBufferSize = static_cast<int>(vertexCount * sizeof(st_vertex));
-    if (newBufferSize <= currentBufferSize) {
-        glNamedBufferSubData(vboID, 0, newBufferSize, &(m_vertices[0].position[0]));
-    } else {
-        glNamedBufferData(vboID, newBufferSize, &(m_vertices[0].position[0]), GL_STATIC_DRAW);
-        currentBufferSize = newBufferSize;
-    }
-
-    return true;
-}
-
-void Chunk::render(int &availableChanges, Shader &shader) {
-    if (!m_generated)
-        return;
-
-    if (availableChanges > 0 && m_hasVertexUpdate) {
+    int segmentSize = static_cast<int>(newVertexCount * sizeof(st_vertex));
+    if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
+        vertexCount = newVertexCount;
         availableChanges--;
-        if (!chunkBufferUpdate())
-            return;
+        glNamedBufferSubData(oboID,
+                             offset * sizeof(glm::fvec3),
+                             sizeof(glm::fvec3),
+                             &m_position.x);
+        glNamedBufferSubData(vboID,
+                             offset * sizeof(st_vertex) * CHUNK_BASE_VERTEX_OFFSET,
+                             segmentSize,
+                             &(m_vertices[0].position[0])
+        );
     }
 
-    if (vertexCount > 0) {
-        shader.setFloat3("CHUNK_POSITION", m_position);
-        glDrawArrays(GL_TRIANGLES, 0, vertexCount);
-    }
+    return vertexCount;
 }
 
 void Chunk::fillSunlight() {
@@ -372,13 +362,11 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
         }
         if (forceUpdate) {
             update();
-            chunkBufferUpdate();
         }
 
         if (z == C_EXTEND-1 && nullptr != m_north) {
             if (forceUpdate) {
                 m_north->update();
-                m_north->chunkBufferUpdate();
             }
             else
                 m_north->m_needUpdate = true;
@@ -386,7 +374,6 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
         if (x == C_EXTEND-1 && nullptr != m_east) {
             if (forceUpdate) {
                 m_east->update();
-                m_east->chunkBufferUpdate();
             }
             else
                 m_east->m_needUpdate = true;
@@ -394,7 +381,6 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
         if (z == 0 && nullptr != m_south) {
             if (forceUpdate) {
                 m_south->update();
-                m_south->chunkBufferUpdate();
             }
             else
                 m_south->m_needUpdate = true;
@@ -402,7 +388,6 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
         if (x == 0 && nullptr != m_west) {
             if (forceUpdate) {
                 m_west->update();
-                m_west->chunkBufferUpdate();
             }
             else
                 m_west->m_needUpdate = true;

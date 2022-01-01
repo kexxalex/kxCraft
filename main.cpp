@@ -24,7 +24,7 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = true;
+static constexpr bool VSYNC = false;
 static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
@@ -32,14 +32,19 @@ static Player PLAYER;
 
 
 
+void loadShader() {
+    Shader& shader = SHADER_MANAGER.getShader("./res/shader/terrain");
+    shader.Bind();
+    shader.setInt("DIFFUSE", 0);
+    shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
+    shader.setBool("DISTANCE_CULLING", false);
+}
+
+
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
         SHADER_MANAGER.reloadAll();
-        Shader& shader = SHADER_MANAGER.getShader("./res/shader/terrain");
-        shader.Bind();
-        shader.setInt("DIFFUSE", 0);
-        shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
-        shader.setBool("DISTANCE_CULLING", false);
+        loadShader();
     }
     if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
         WORLD.reloadCurrentChunk();
@@ -54,8 +59,8 @@ void window_size_callback(GLFWwindow* window, int width, int height)
 }
 
 bool initGLWindow() {
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
@@ -97,7 +102,7 @@ void render() {
     static glm::fvec3 up(0, 1, 0);
     static glm::fmat4x4 proj = glm::perspective(
             glm::radians(65.0f),
-            1.0f * WIDTH / HEIGHT,
+            (float)WIDTH / (float)HEIGHT,
             0.03f, 1024.0f);
 
     static double lastFrame = glfwGetTime();
@@ -112,6 +117,7 @@ void render() {
     glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
 
+    terrainShader.Bind();
     terrainShader.setMatrixFloat4("MVP", MVP);
     terrainShader.setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
     terrainShader.setFloat("TIME", (float)time);
@@ -150,11 +156,12 @@ int main() {
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
 
-    static Shader& terrainShader = SHADER_MANAGER.getShader("./res/shader/terrain");
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 35987, 20, THREAD_COUNT);
+    WORLD = World({0, 0, 0}, 4562, 20, THREAD_COUNT);
+    WORLD.initializeVertexArray();
+
     std::thread worldUpdater[THREAD_COUNT];
     float y = C_HEIGHT;
     while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
@@ -178,12 +185,11 @@ int main() {
         glfwSwapBuffers(WINDOW);
         glfwPollEvents();
     }
-    WORLD.forcePushBuffer();
 
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
     glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
 
-    terrainShader.Bind();
+    loadShader();
 
     while (!glfwWindowShouldClose(WINDOW)) {
         render();
@@ -191,7 +197,7 @@ int main() {
 
         glm::dvec2 mouse;
         glfwGetCursorPos(WINDOW, &mouse.x, &mouse.y);
-        glfwSetCursorPos(WINDOW, WIDTH / 2, HEIGHT / 2);
+        glfwSetCursorPos(WINDOW, static_cast<double>(WIDTH / 2), static_cast<double>(HEIGHT / 2));
         PLAYER.addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
     }
     WORLD.setInactive();
@@ -200,6 +206,7 @@ int main() {
             thread.join();
     }
 
+    WORLD.cleanUp();
     glfwTerminate();
 
     return 0;

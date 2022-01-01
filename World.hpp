@@ -11,45 +11,45 @@
 #include "Chunk.hpp"
 #include <unordered_map>
 #include <mutex>
+#include <iostream>
 
 
-constexpr int CHANGE_CHUNK_MAX = 1;
+static constexpr int CHANGE_CHUNK_MAX = 128;
 
+inline int MOD(int n, int m) {
+    return n % m + m * (n < 0);
+}
 
-struct hash_iVec2 {
-    size_t operator()(const glm::ivec2 &p) const {
-        return std::hash<int>{}(p.x) ^ std::hash<int>{}(p.y);
-    }
+struct st_DAIC {
+    unsigned int count;
+    unsigned int instanceCount;
+    unsigned int first;
+    unsigned int baseInstance;
 };
+
 
 class World {
 public:
     World() = default;
     World(const glm::fvec3 &start_position, int seed, int renderDistance = 4, int threadCount = 2);
 
-    World& operator=(const World& world) {
+    World &operator=(const World &world)
+    {
         renderDistance = world.renderDistance;
         threadCount = world.threadCount;
         worldGenerator = world.worldGenerator;
-        playerDirection = world.playerDirection;
         playerPosition = world.playerPosition;
+        maxWorldExtend = 2 * renderDistance + 3;
+        chunks = new Chunk[maxWorldExtend * maxWorldExtend];
 
-        chunks.reserve((2*renderDistance+1) * (2*renderDistance+1));
+        glm::ivec2 chunkPos;
 
-        glm::ivec2 chunkPos = glm::ivec2(
-                glm::floor(playerPosition.x / C_EXTEND),
-                glm::floor(playerPosition.z / C_EXTEND)
-        ) * C_EXTEND;
-
-        chunkLock.lock();
-        chunks[chunkPos] = Chunk(&worldGenerator, chunkPos.x, chunkPos.y);
-        chunks[chunkPos].generate();
-        chunkLock.unlock();
+        toChunkPosition(playerPosition, chunkPos);
+        chunks[linearizeChunkPos(chunkPos)].build(&worldGenerator, chunkPos.x, chunkPos.y);
+        chunks[linearizeChunkPos(chunkPos)].generate();
 
         return *this;
     }
-
-    ~World();
 
     void update(int threadID);
     void cleanUp();
@@ -64,43 +64,56 @@ public:
     void setInactive() { m_active = false; }
 
     short setBlock(float x, float y, float z, short ID, bool chunkUpdate=false);
-
-    const st_block &getBlock(float x, float y, float z) const;;
+    [[nodiscard]] const st_block &getBlock(float x, float y, float z) const;
 
     void reloadCurrentChunk();
-
-    void forcePushBuffer();
-
     void initializeVertexArray();
 
     [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }
+    [[nodiscard]] inline int linearizeChunkPos(const glm::ivec2 &chunkPos) const {
+        return MOD(chunkPos.y + renderDistance + 1, maxWorldExtend) * maxWorldExtend + MOD(chunkPos.x + renderDistance + 1, maxWorldExtend);
+    }
 
 private:
     void updateChunk(const glm::ivec2 &position);
-    void updateChunkNeighbours(Chunk &chunk);
+    void updateChunkBuffers();
+    void updateIndirect();
 
-    bool toChunkPosition(float x, float y, float z, glm::ivec2 &chunkPos) const;
-    bool toChunkPositionAndOffset(float x, float y, float z, glm::ivec2 &chunkPos, glm::ivec2 &inner) const;
-
-    inline bool toChunkPosition(const glm::fvec3 &position, glm::ivec2 &chunkPos) const {
-        return toChunkPosition(position.x, position.y, position.z, chunkPos);
+    static inline void toChunkPosition(float x, float z, glm::ivec2 &chunkPos) {
+        chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) );
     }
-    inline bool toChunkPositionAndOffset(const glm::fvec3 &position, glm::ivec2 &chunkPos, glm::ivec2 &inner) const {
-        return toChunkPositionAndOffset(position.x, position.y, position.z, chunkPos, inner);
+    static inline void toChunkPosition(const glm::fvec3 &position, glm::ivec2 &chunkPos) {
+        return toChunkPosition(position.x, position.z, chunkPos);
     }
 
-    bool m_active{true};
-    int renderDistance{6};
-    int threadCount{1};
+    static inline void toChunkPositionAndOffset(float x, float z, glm::ivec2 &chunkPos, glm::ivec2 &inner) {
+        chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) );
+        inner = glm::ivec2(glm::floor(x - (float)chunkPos.x * C_EXTEND), glm::floor(z - (float)chunkPos.y * C_EXTEND));
+    }
+    static inline void toChunkPositionAndOffset(const glm::fvec3 &position, glm::ivec2 &chunkPos, glm::ivec2 &inner) {
+        toChunkPositionAndOffset(position.x, position.z, chunkPos, inner);
+    }
+
+    bool m_active{ true };
+    int renderDistance{ 6 };
+    int threadCount{ 1 };
+
+    WorldGenerator worldGenerator;
 
     glm::fvec3 playerPosition{0, 0, 0};
     glm::fvec3 playerDirection{0, 0, 1};
-    unsigned int vaoID{0};
 
-    std::vector<glm::ivec2> removeChunks{CHANGE_CHUNK_MAX};
+    unsigned int vaoID{ 0 };
+    unsigned int vboID{ 0 };
+    unsigned int oboID{ 0 };
+    unsigned int iboID{ 0 };
 
-    WorldGenerator worldGenerator;
+    int indirectCount{ 0 };
+    bool hasChunkBufferChanges{ false };
+
+    int maxWorldExtend{ 0 };
+    Chunk* chunks{ nullptr };
+
     std::mutex chunkLock;
-    std::unordered_map<const glm::ivec2, Chunk, hash_iVec2> chunks;
 };

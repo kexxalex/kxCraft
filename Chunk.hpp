@@ -16,6 +16,11 @@
 #include "WorldGenerator.hpp"
 #include "Shader.hpp"
 
+static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 32768;
+
+
+
+
 struct st_vertex {
     unsigned char position[3]{ 0, 0, 0};
     unsigned char ID;
@@ -32,14 +37,11 @@ struct st_vertex {
 class Chunk {
 public:
     Chunk() = default;
-    Chunk(WorldGenerator *world_generator, int x, int z);
     ~Chunk();
-
-    Chunk &operator=(const Chunk &c);
 
     void update();
     void generate();
-    void render(int &availableChanges, Shader &shader);
+    void build(WorldGenerator *world_generator, int x, int z);
 
     inline Chunk* const getNorth() const noexcept { return m_north; }
     inline Chunk* const getEast() const noexcept { return m_east; }
@@ -71,25 +73,28 @@ public:
             m_west->setEast(this, true);
     }
 
-    bool chunkBufferUpdate();
+    inline void setBufferOffset(unsigned int VBO, int bufferOffset) {
+        vboID = VBO;
+        offset = bufferOffset;
+    }
 
+    int chunkBufferUpdate(int &availableChanges, unsigned int oboID);
+
+    [[nodiscard]] inline int getVertexCount() const noexcept { return vertexCount; }
     [[nodiscard]] inline bool needUpdate() const noexcept { return m_needUpdate; }
+    [[nodiscard]] inline bool needBufferUpdate() const noexcept { return m_hasVertexUpdate; }
     [[nodiscard]] inline bool isGenerated() const noexcept { return m_generated; }
     [[nodiscard]] const Block& getBlockAttributes(int x, int y, int z) const { return BLOCKS[getBlock(x, y, z).ID]; }
     [[nodiscard]] inline const bool& isTransparent(int x, int y, int z) const {
         return getBlockAttributes(x, y, z).transparent;
     }
 
+    [[nodiscard]] inline const glm::fvec3& getPosition() const noexcept { return m_position; }
     [[nodiscard]] inline glm::ivec2 getXZPosition() const noexcept { return {m_position.x, m_position.z}; }
     [[nodiscard]] const st_block& getBlock(int x, int y, int z) const;
 
     short setBlock(int x, int y, int z, short block = AIR, bool forceUpdate=false);
-
-
-
-    unsigned int vboID{0};
-
-
+    bool available{ true };
 
 private:
     st_block m_blocks[C_EXTEND * C_EXTEND * C_HEIGHT];
@@ -101,8 +106,6 @@ private:
     [[nodiscard]] st_block& getBlockRef(int x, int y, int z);
     [[nodiscard]] inline int getCornerLight(int x, int y, int z);
 
-    void initializeVertexArray();
-
     void addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB);
     void addCube(int x, int y, int z, short block);
     void addCross(int x, int y, int z, short block);
@@ -111,13 +114,15 @@ private:
 
     glm::fvec3 m_position{0, 0, 0};
     WorldGenerator *m_worldGenerator{ nullptr };
+
     bool m_hasVertexUpdate{ false };
+    int offset{ 0 };
 
     std::mutex vertexLock;
     std::mutex chunkDestructionLock;
 
     int vertexCount{0};
-    int currentBufferSize{0};
+    unsigned int vboID{ 0 };
 
     std::vector<st_vertex> m_vertices;
 };

@@ -6,9 +6,10 @@
  */
 
 #include "World.hpp"
+#include <iostream>
 
 
-static const float CLIP_ANGLE = glm::cos(glm::radians(45.0f));
+static const float CLIP_ANGLE = glm::cos(glm::radians(50.0f));
 constexpr glm::ivec2 tJunctionOffset[4] = {
         {1,1},
         {1,-1},
@@ -23,56 +24,49 @@ constexpr glm::ivec2 tOffset[4] = {
 };
 
 
-World::~World() {
-    cleanUp();
-}
 
 World::World(const glm::fvec3 &start_position, int seed, int renderDistance, int threadCount)
-        : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed),
-          chunks(4 * renderDistance * renderDistance), playerPosition(start_position)
+    : renderDistance(renderDistance), threadCount(threadCount), worldGenerator(seed), playerPosition(start_position),
+      maxWorldExtend(2 * renderDistance + 3)
 {
 
 }
 
 void World::cleanUp() {
-    chunks.clear();
+    delete[] chunks;
 }
 
 const st_block &World::getBlock(float x, float y, float z) const {
     glm::ivec2 chunkPos, inner;
-    return (toChunkPositionAndOffset(x, y, z, chunkPos, inner)
-            ? chunks.at(chunkPos).getBlock(inner.x, (int) y, inner.y)
-            : AIR_BLOCK);
+    toChunkPositionAndOffset(x, z, chunkPos, inner);
+    return chunks[linearizeChunkPos(chunkPos)].getBlock(inner.x, (int) y, inner.y);
 }
 
 short World::setBlock(float x, float y, float z, short ID, bool forceChunkUpdate) {
     glm::ivec2 chunkPos, inner;
-    return (toChunkPositionAndOffset(x, y, z, chunkPos, inner)
-            ? chunks.at(chunkPos).setBlock(inner.x, (int) y, inner.y, ID, forceChunkUpdate)
-            : (short)AIR);
+    toChunkPositionAndOffset(x, z, chunkPos, inner);
+    return chunks[linearizeChunkPos(chunkPos)].setBlock(inner.x, (int) y, inner.y, ID, forceChunkUpdate);
 }
 
 void World::update(int threadID) {
-    glm::fvec3 direction = playerDirection;
-
     glm::ivec2 playerChunkPosition;
     toChunkPosition(playerPosition, playerChunkPosition);
 
     if (threadID == 0)
         updateChunk(playerChunkPosition);
 
-    for (int r = 1 + threadID; r <= renderDistance && glm::dot(direction, playerDirection) > 0.98f; r += threadCount) {
+    for (int r = 1 + threadID; r <= renderDistance; r += threadCount) {
         for (const glm::ivec2& offset : tOffset) {
-            updateChunk(playerChunkPosition + r * offset * C_EXTEND);
+            updateChunk(playerChunkPosition + r * offset);
         }
 
-        for (int s = 1; s <= r && glm::dot(direction, playerDirection) > 0.98f; s++) {
+        for (int s = 1; s <= r; s++) {
             for (const glm::ivec2& offset : tJunctionOffset) {
-                updateChunk({playerChunkPosition.x + r * offset.x * C_EXTEND,
-                             playerChunkPosition.y + s * offset.y * C_EXTEND});
+                updateChunk({playerChunkPosition.x + r * offset.x,
+                             playerChunkPosition.y + s * offset.y});
                 if (s < r) {
-                    updateChunk({playerChunkPosition.x + s * offset.x * C_EXTEND,
-                                 playerChunkPosition.y + r * offset.y * C_EXTEND});
+                    updateChunk({playerChunkPosition.x + s * offset.x,
+                                 playerChunkPosition.y + r * offset.y});
                 }
             }
 
@@ -80,125 +74,122 @@ void World::update(int threadID) {
     }
 }
 
-void World::updateChunkNeighbours(Chunk &chunk) {
-    if (chunkLock.try_lock()) {
-        const glm::ivec2& position = chunk.getXZPosition();
-        const glm::ivec2 north = position + glm::ivec2(0, C_EXTEND);
-        const glm::ivec2 east = position + glm::ivec2(C_EXTEND, 0);
-        const glm::ivec2 south = position + glm::ivec2(0, -C_EXTEND);
-        const glm::ivec2 west = position + glm::ivec2(-C_EXTEND, 0);
-
-        if (chunk.getNorth() == nullptr && chunks.find(north) != chunks.end())
-            chunk.setNorth(&chunks[north]);
-        if (chunk.getEast() == nullptr && chunks.find(east) != chunks.end())
-            chunk.setEast(&chunks[east]);
-        if (chunk.getSouth() == nullptr && chunks.find(south) != chunks.end())
-            chunk.setSouth(&chunks[south]);
-        if (chunk.getWest() == nullptr && chunks.find(west) != chunks.end())
-            chunk.setWest(&chunks[west]);
-        chunkLock.unlock();
-    }
-}
-
 void World::updateChunk(const glm::ivec2 &position) {
-    glm::ivec2 chunkPos = glm::ivec2(
-            glm::floor(playerPosition.x / C_EXTEND),
-            glm::floor(playerPosition.z / C_EXTEND)
-    ) * C_EXTEND;
-
-    auto delta = glm::fvec2(position - chunkPos) / (float)C_EXTEND;
-    if (glm::dot(delta, delta) > static_cast<float>(renderDistance*renderDistance))
-        return;
-
-    // Generate the chunk at <position> if it doesn't exist
-    if (chunks.find(position) == chunks.end())
-    {
+    Chunk &chunk = chunks[linearizeChunkPos(position)];
+    glm::ivec2 cPos = chunk.getXZPosition();
+    if (chunk.available || cPos != position) {
         chunkLock.lock();
-        chunks[position] = Chunk(&worldGenerator, position.x, position.y);
+        chunk.build(&worldGenerator, position.x, position.y);
+
+        const glm::ivec2 north = position + glm::ivec2(0, 1);
+        const glm::ivec2 east = position + glm::ivec2(1, 0);
+        const glm::ivec2 south = position + glm::ivec2(0, -1);
+        const glm::ivec2 west = position + glm::ivec2(-1, 0);
+
+        chunk.setNorth(&chunks[linearizeChunkPos(north)]);
+        chunk.setEast(&chunks[linearizeChunkPos(east)]);
+        chunk.setSouth(&chunks[linearizeChunkPos(south)]);
+        chunk.setWest(&chunks[linearizeChunkPos(west)]);
         chunkLock.unlock();
 
-        chunks.at(position).generate();
+        chunk.generate();
     }
-
-    // Now, the chunk at <position> exists
-    Chunk &chunk = chunks.at(position);
-    updateChunkNeighbours(chunk);
 
     if (chunk.needUpdate()) {
         chunk.update();
     }
+
+    if (chunk.needBufferUpdate())
+        hasChunkBufferChanges = true;
 }
 
-void World::forcePushBuffer() {
-    initializeVertexArray();
-    for (auto &chunk: chunks)
-        chunk.second.chunkBufferUpdate();
+void World::updateChunkBuffers() {
+    hasChunkBufferChanges = false;
+    int availableChanges = CHANGE_CHUNK_MAX;
+    for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
+        Chunk &chunk = chunks[i];
+        chunk.chunkBufferUpdate(availableChanges, oboID);
+    }
 }
 
-void World::render(Shader &shader) {
+void World::updateIndirect() {
     glm::ivec2 playerChunkPosition;
     toChunkPosition(playerPosition, playerChunkPosition);
 
-    int availableChanges = CHANGE_CHUNK_MAX;
+    int indirectIndex = 0;
+    auto indirect = (st_DAIC*)glMapNamedBuffer(iboID, GL_WRITE_ONLY);
 
-    glBindVertexArray(vaoID);
-
-    for (auto &chunk: chunks) {
-        auto deltaPlayerChunk = glm::fvec2(chunk.first - playerChunkPosition) / (float)C_EXTEND;
-        bool outOfRange = glm::dot(deltaPlayerChunk, deltaPlayerChunk) > static_cast<float>(renderDistance*renderDistance) + 1;
-        if (chunk.second.isGenerated() && outOfRange && removeChunks.size() < CHANGE_CHUNK_MAX) {
-            removeChunks.push_back(chunk.first);
-        }
-
-        if (outOfRange)
-            continue;
+    for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
+        Chunk &chunk = chunks[i];
+        unsigned int count = chunk.getVertexCount();
 
         glm::fvec2 sideA = glm::normalize(glm::fvec2(playerDirection.x, playerDirection.z));
-        glm::fvec2 sideB = glm::normalize(glm::fvec2(chunk.first - playerChunkPosition) + glm::fvec2(C_EXTEND * 0.5) + 4.0f * sideA * (float) C_EXTEND);
+        glm::fvec2 sideB = glm::normalize(
+                glm::fvec2(chunk.getXZPosition() - playerChunkPosition) + 0.5f + 2.0f * sideA);
         float angle = glm::dot(sideA, sideB);
 
-        if (angle > CLIP_ANGLE) { // || angle < glm::cos(65.0f * 0.5f))
-            glVertexArrayVertexBuffer(vaoID, 0, chunk.second.vboID, 0, sizeof(st_vertex));
-            glVertexArrayVertexBuffer(vaoID, 1, chunk.second.vboID, 4, sizeof(st_vertex));
-            chunk.second.render(availableChanges, shader);
+        if (count > 0 && angle > CLIP_ANGLE) {
+            indirect[indirectIndex++] = {count, 1, CHUNK_BASE_VERTEX_OFFSET * i, static_cast<unsigned int>(i)};
         }
     }
 
-    if (!removeChunks.empty() && chunkLock.try_lock()) {
-        for (auto& rmc : removeChunks) {
-            chunks.erase(rmc);
-        }
-        removeChunks.clear();
-        chunkLock.unlock();
-    }
+    indirectCount = indirectIndex;
+    glUnmapNamedBuffer(iboID);
+}
+
+void World::render(Shader &shader) {
+    if (hasChunkBufferChanges)
+        updateChunkBuffers();
+    updateIndirect();
+
+    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, iboID);
+    glBindVertexArray(vaoID);
+    glMultiDrawArraysIndirect(GL_TRIANGLES, nullptr, indirectCount, 0);
 }
 
 void World::reloadCurrentChunk() {
     glm::ivec2 playerChunkPosition;
-    if (toChunkPosition(playerPosition, playerChunkPosition))
-        chunks[playerChunkPosition].update();
+    toChunkPosition(playerPosition, playerChunkPosition);
+
+    int av = 1;
+    Chunk &chunk =  chunks[linearizeChunkPos(playerChunkPosition)];
+    chunk.update();
+    chunk.chunkBufferUpdate(av, oboID);
 }
 
 void World::initializeVertexArray() {
-    if (vaoID != 0)
+    if (vaoID != 0 || vboID != 0)
         return;
 
     glCreateVertexArrays(1, &vaoID);
+    glCreateBuffers(1, &vboID);
+    glCreateBuffers(1, &oboID);
+    glCreateBuffers(1, &iboID);
 
+    glNamedBufferData(vboID, static_cast<GLsizei>(maxWorldExtend * maxWorldExtend * CHUNK_BASE_VERTEX_OFFSET * sizeof(st_vertex)),
+                      nullptr, GL_STATIC_DRAW);
+    glNamedBufferData(oboID, static_cast<GLsizei>(maxWorldExtend * maxWorldExtend * sizeof(glm::fvec3)),
+                      nullptr, GL_STATIC_DRAW);
+    glNamedBufferData(iboID, static_cast<GLsizei>(maxWorldExtend * maxWorldExtend * sizeof(st_DAIC)),
+                      nullptr, GL_STREAM_DRAW);
+
+    for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
+        chunks[i].setBufferOffset(vboID, i);
+    }
+
+    glVertexArrayVertexBuffer(vaoID, 0, vboID, 0, sizeof(st_vertex));
     glVertexArrayAttribFormat(vaoID, 0, 4, GL_UNSIGNED_BYTE, GL_FALSE, 0);
+
+    glVertexArrayVertexBuffer(vaoID, 1, vboID, 4, sizeof(st_vertex));
     glVertexArrayAttribFormat(vaoID, 1, 1, GL_SHORT, GL_FALSE, 0);
+
+    glVertexArrayVertexBuffer(vaoID, 2, oboID, 0, sizeof(glm::fvec3));
+    glVertexArrayAttribFormat(vaoID, 2, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayBindingDivisor(vaoID, 2, 1);
 
     glEnableVertexArrayAttrib(vaoID, 0);
     glEnableVertexArrayAttrib(vaoID, 1);
-}
+    glEnableVertexArrayAttrib(vaoID, 2);
 
-bool World::toChunkPosition(float x, float y, float z, glm::ivec2 &chunkPos) const {
-    chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) ) * C_EXTEND;
-    return y >= 0 && y < C_HEIGHT && (chunks.find(chunkPos) != chunks.end());
-}
-
-bool World::toChunkPositionAndOffset(float x, float y, float z, glm::ivec2 &chunkPos, glm::ivec2 &inner) const {
-    chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) ) * C_EXTEND;
-    inner = glm::ivec2(glm::floor(x - (float)chunkPos.x), glm::floor(z - (float)chunkPos.y));
-    return y >= 0 && y < C_HEIGHT && (chunks.find(chunkPos) != chunks.end());
+    hasChunkBufferChanges = true;
 }

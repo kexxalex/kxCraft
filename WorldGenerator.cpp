@@ -74,18 +74,21 @@ void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
     );
 
     stack[0] = BEDROCK;
-    //stack[0].setSunLight(0);
+    stack[0].setSunLight(0);
 
-    for (int y = 1; y < height; y++) {
-        if (caveNoise.GetValue(x, y * 1.5, z) < 0.8) {
+    for (int y = 1; y < C_HEIGHT; y++) {
+        if (y < height && caveNoise.GetValue(x, y * 1.5, z) < 0.8) {
             stack[y].ID = (y < height - 4) ? BLOCK_ID::STONE : BLOCK_ID::DIRT;
         }
-        //stack[y].setSunLight(0);
+        else {
+            stack[y].ID = BLOCK_ID::AIR;
+        }
+        stack[y].setSunLight(0);
     }
 
     if (caveNoise.GetValue(x, height * 1.5, z) < 0.8) {
         stack[height].ID = BLOCK_ID::GRASS;
-        //stack[height].setSunLight(0);
+        stack[height].setSunLight(0);
 
         double onVal = oreNoise.GetValue(x, height+1, z);
         if (onVal > -0.1 && onVal < 0.1) {
