@@ -8,7 +8,7 @@
 #include <iostream>
 
 static constexpr double MOUSE_SPEED = 0.1;
-static constexpr float MOVEMENT_SPEED = 3.5f;
+static constexpr float MOVEMENT_SPEED = 64.0f;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
         : position(position), bbox(bbox), world(world) {
@@ -45,7 +45,7 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
             position.z += dz;
 
     }
-    velocity.y -= static_cast<float>(dTime)*2*9.81f;
+    // velocity.y -= static_cast<float>(dTime)*2*9.81f;
 
     world->setPlayer(position, direction);
 

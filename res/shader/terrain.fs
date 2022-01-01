@@ -30,7 +30,7 @@ void main() {
     float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.7f + 0.4f);
 
     // Ambient Light from occlusion
-    float aLight = min(bilinearLight, 1.0f) * 0.95f + 0.05;
+    float aLight = min(bilinearLight, 1.0f) * 0.9f + 0.1;
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;

@@ -14,7 +14,7 @@
 #include <iostream>
 
 
-static constexpr int CHANGE_CHUNK_MAX = 4;
+static constexpr int CHANGE_CHUNK_MAX = 1024;
 
 inline int MOD(int n, int m) {
     return n % m + m * (n < 0);
@@ -76,7 +76,7 @@ public:
     }
 
 private:
-    void updateChunk(const glm::ivec2 &position);
+    void updateChunk(const glm::ivec2 &position, int threadID);
     void updateChunkBuffers();
     void updateIndirect();
 

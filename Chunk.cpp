@@ -13,6 +13,7 @@
 void Chunk::build(WorldGenerator *worldGenerator, int x, int z)
 {
     chunkDestructionLock.lock();
+    vertexLock.lock();
     available = false;
     m_needUpdate = true;
     m_generated = false;
@@ -20,6 +21,8 @@ void Chunk::build(WorldGenerator *worldGenerator, int x, int z)
     vertexCount = 0;
     m_position = glm::fvec3(x, 0, z);
     m_worldGenerator = worldGenerator;
+    m_vertices.clear();
+    vertexLock.unlock();
     chunkDestructionLock.unlock();
 }
 
@@ -54,7 +57,6 @@ void Chunk::generate() {
                     &m_blocks[linearizeCoord(x, 0, z)]);
         }
     }
-    fillSunlight();
     m_generated = true;
 }
 
@@ -210,6 +212,7 @@ void Chunk::update() {
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
 
+    vertexLock.lock();
     m_needUpdate = false;
     m_vertices.clear();
 
@@ -231,9 +234,9 @@ void Chunk::update() {
             }
         }
     }
-    chunkDestructionLock.unlock();
-
     m_hasVertexUpdate = true;
+    vertexLock.unlock();
+    chunkDestructionLock.unlock();
 }
 
 unsigned int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
@@ -243,27 +246,31 @@ unsigned int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID)
     if (!m_hasVertexUpdate)
         return vertexCount;
 
-    auto newVertexCount = static_cast<unsigned int>(m_vertices.size());
-    m_hasVertexUpdate = false;
+    if (vertexLock.try_lock()) {
+        auto newVertexCount = static_cast<unsigned int>(m_vertices.size());
+        m_hasVertexUpdate = false;
 
-    if (newVertexCount == 0) {
-        vertexCount = 0;
-        return 0;
-    }
+        if (newVertexCount == 0) {
+            vertexLock.unlock();
+            vertexCount = 0;
+            return 0;
+        }
 
-    auto segmentSize = static_cast<unsigned int>(newVertexCount * sizeof(st_vertex));
-    if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
-        vertexCount = newVertexCount;
-        availableChanges--;
-        glNamedBufferSubData(oboID,
-                             offset * sizeof(glm::fvec3),
-                             sizeof(glm::fvec3),
-                             &m_position.x);
-        glNamedBufferSubData(vboID,
-                             offset * sizeof(st_vertex) * CHUNK_BASE_VERTEX_OFFSET,
-                             segmentSize,
-                             &(m_vertices[0].position[0])
-        );
+        auto segmentSize = static_cast<unsigned int>(newVertexCount * sizeof(st_vertex));
+        if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
+            vertexCount = newVertexCount;
+            availableChanges--;
+            glNamedBufferSubData(oboID,
+                                 offset * sizeof(glm::fvec3),
+                                 sizeof(glm::fvec3),
+                                 &m_position.x);
+            glNamedBufferSubData(vboID,
+                                 offset * sizeof(st_vertex) * CHUNK_BASE_VERTEX_OFFSET,
+                                 segmentSize,
+                                 &(m_vertices[0].position[0])
+            );
+        }
+        vertexLock.unlock();
     }
 
     return vertexCount;

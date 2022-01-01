@@ -124,5 +124,6 @@ private:
     std::vector<st_vertex> m_vertices;
 
     std::mutex chunkDestructionLock;
+    std::mutex vertexLock;
 };
 

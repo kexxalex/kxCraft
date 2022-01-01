@@ -25,7 +25,7 @@ static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
 static constexpr bool VSYNC = false;
-static constexpr int THREAD_COUNT = 1;
+static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World WORLD;
 static Player PLAYER;

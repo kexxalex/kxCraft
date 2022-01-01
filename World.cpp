@@ -52,21 +52,19 @@ void World::update(int threadID) {
     glm::ivec2 playerChunkPosition;
     toChunkPosition(playerPosition, playerChunkPosition);
 
-    if (threadID == 0)
-        updateChunk(playerChunkPosition);
-
-    for (int r = 1 + threadID; r <= renderDistance; r += threadCount) {
+    updateChunk(playerChunkPosition, threadID);
+    for (int r = 1 + threadID; r <= renderDistance; r += 1) {
         for (const glm::ivec2& offset : tOffset) {
-            updateChunk(playerChunkPosition + r * offset);
+            updateChunk(playerChunkPosition + r * offset, threadID);
         }
 
         for (int s = 1; s <= r; s++) {
             for (const glm::ivec2& offset : tJunctionOffset) {
                 updateChunk({playerChunkPosition.x + r * offset.x,
-                             playerChunkPosition.y + s * offset.y});
+                             playerChunkPosition.y + s * offset.y}, threadID);
                 if (s < r) {
                     updateChunk({playerChunkPosition.x + s * offset.x,
-                                 playerChunkPosition.y + r * offset.y});
+                                 playerChunkPosition.y + r * offset.y}, threadID);
                 }
             }
 
@@ -74,7 +72,10 @@ void World::update(int threadID) {
     }
 }
 
-void World::updateChunk(const glm::ivec2 &position) {
+void World::updateChunk(const glm::ivec2 &position, int threadID) {
+    if (linearizeChunkPos(position) % threadCount != threadID)
+        return;
+
     Chunk &chunk = chunks[linearizeChunkPos(position)];
     glm::ivec2 cPos = chunk.getXZPosition();
     if (chunk.available || cPos != position) {
