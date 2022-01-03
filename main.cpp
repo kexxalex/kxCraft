@@ -24,11 +24,11 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = false;
+static constexpr bool VSYNC = true;
 static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
-static World WORLD;
-static Player PLAYER;
+static World *WORLD = nullptr;
+static Player *PLAYER = nullptr;
 
 
 
@@ -36,8 +36,8 @@ void loadShader() {
     Shader& shader = SHADER_MANAGER.getShader("./res/shader/terrain");
     shader.Bind();
     shader.setInt("DIFFUSE", 0);
-    shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD.getRenderDistance());
-    shader.setBool("DISTANCE_CULLING", false);
+    shader.setFloat("INV_RENDER_DIST", 1.0f / WORLD->getRenderDistance());
+    shader.setBool("DISTANCE_CULLING", true);
 }
 
 
@@ -47,7 +47,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
         loadShader();
     }
     if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
-        WORLD.reloadCurrentChunk();
+        WORLD->reloadCurrentChunk();
     }
 }
 
@@ -86,9 +86,9 @@ bool initGLWindow() {
 }
 
 void worldUpdaterThread(int thrID) {
-    WORLD.update(thrID);
-    while (WORLD.isActive()) {
-        WORLD.update(thrID);
+    std::cout << "Updater Thread " << thrID << std::endl;
+    while (WORLD->isActive()) {
+        WORLD->update(thrID);
         FIRST_UPDATE[thrID] = true;
     }
 }
@@ -112,17 +112,19 @@ void render() {
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    PLAYER.update(WINDOW, time, dTime);
+    PLAYER->update(WINDOW, time, dTime);
 
-    glm::fmat4x4 view = glm::lookAt(PLAYER.getEyePosition(), PLAYER.getEyePosition() + PLAYER.getDirection(), up);
+    glm::fvec3 playerEyePosition = PLAYER->getEyePosition();
+
+    glm::fmat4x4 view = glm::lookAt(playerEyePosition, playerEyePosition + PLAYER->getDirection(), up);
     glm::fmat4x4 MVP = proj * view;
 
     terrainShader.Bind();
     terrainShader.setMatrixFloat4("MVP", MVP);
-    terrainShader.setFloat3("PLAYER_POSITION", PLAYER.getEyePosition());
+    terrainShader.setFloat3("PLAYER_POSITION", playerEyePosition);
     terrainShader.setFloat("TIME", (float)time);
 
-    WORLD.render(terrainShader);
+    WORLD->render(glfwGetKey(WINDOW, GLFW_KEY_LEFT_ALT));
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -149,9 +151,8 @@ int main() {
     std::cout << "OpenGL " << glGetString(GL_VERSION) << std::endl;
 
     glClearColor(0.75, 0.9, 1.0, 1.0);
-    glEnable(GL_CULL_FACE);
+    glClearDepth(1.0);
     glEnable(GL_DEPTH_TEST);
-    glEnable(GL_TEXTURE_2D);
 
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
@@ -159,16 +160,15 @@ int main() {
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
     DIFFUSE->BindTo(0);
 
-    WORLD = World({0, 0, 0}, 4562, 16, THREAD_COUNT);
-    WORLD.initializeVertexArray();
+    WORLD = new World({0, 0, 0}, 4562, 16, THREAD_COUNT);
+    WORLD->initializeVertexArray();
+
+    float y = C_HEIGHT-1.0f;
+    while (WORLD->getBlock(0, y, 0).ID == AIR)
+        y--;
+    PLAYER = new Player(WORLD, {0.5f, y + 1.05f, 0.5f}, {0.6f, 1.8f, 0.6f});
 
     std::thread worldUpdater[THREAD_COUNT];
-    float y = C_HEIGHT;
-    while (!BLOCKS[WORLD.getBlock(0, y, 0).ID].collision) {
-        y--;
-    }
-    PLAYER = Player(&WORLD, {0.5f, y + 1.0625f, 0.5f}, {0.6f, 1.8f, 0.6f});
-
     for (int i = 0; i < THREAD_COUNT; i++) {
         worldUpdater[i] = std::thread(worldUpdaterThread, i);
     }
@@ -198,15 +198,18 @@ int main() {
         glm::dvec2 mouse;
         glfwGetCursorPos(WINDOW, &mouse.x, &mouse.y);
         glfwSetCursorPos(WINDOW, static_cast<double>(WIDTH / 2), static_cast<double>(HEIGHT / 2));
-        PLAYER.addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
+        PLAYER->addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
     }
-    WORLD.setInactive();
+
+    std::cout << "Exit game" << std::endl;
+    WORLD->setInactive();
     for (std::thread &thread : worldUpdater) {
         if (thread.joinable())
             thread.join();
     }
 
-    WORLD.cleanUp();
+    delete PLAYER;
+    delete WORLD;
     glfwTerminate();
 
     return 0;

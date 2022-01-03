@@ -22,10 +22,8 @@ const float WAVE_STRENGTH = 0.15f;
 void main() {
     vec3 pos = gl_in[0].gl_Position.xyz;
     vec3 delta = (PLAYER_POSITION - pos);
-    if (DISTANCE_CULLING && vTexture[0] == 39 && dot(delta, delta) > 64.0f * 64.0f)
+    if (DISTANCE_CULLING && vTexture[0] == 39 && dot(delta, delta) > 65536.0f)
         return;
-
-    vec2 uv = 0.0625f * vec2(vTexture[0] % 16, 15 - vTexture[0] / 16);
 
     vec3 edgeA = gl_in[1].gl_Position.xyz - pos;
     vec3 edgeB = gl_in[2].gl_Position.xyz - pos;
@@ -35,8 +33,14 @@ void main() {
         gNormal = vec3(0, 1, 0);
         wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
     }
-    else
+    else {
         gNormal = normalize(cross(edgeA, edgeB));
+        // Cull face of blocks
+        if (dot(gNormal, delta) < 0)
+            return;
+    }
+
+    vec2 uv = 0.0625f * vec2(vTexture[0] % 16, 15 - vTexture[0] / 16);
     gLight = vec4(vLight[0], vLight[1], vLight[2], vTexture[1]) * 0.01666666666f;
 
     gl_Position = MVP * vec4(pos, 1.0);

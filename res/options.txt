@@ -1,0 +1,2 @@
+useMultiDraw = false
+renderDistance = 12

@@ -7,23 +7,24 @@
 
 #include "Chunk.hpp"
 #include <GL/glew.h>
-#include <iostream>
+#include <fstream>
+#include <filesystem>
 
+struct st_chunk_disk_block {
+    unsigned char ID;
+    unsigned char count;
+};
 
-void Chunk::build(WorldGenerator *worldGenerator, int x, int z)
-{
-    chunkDestructionLock.lock();
-    vertexLock.lock();
-    available = false;
-    m_needUpdate = true;
-    m_generated = false;
-    m_hasVertexUpdate = false;
-    vertexCount = 0;
-    m_position = glm::fvec3(x, 0, z);
-    m_worldGenerator = worldGenerator;
-    m_vertices.clear();
-    vertexLock.unlock();
-    chunkDestructionLock.unlock();
+void Chunk::initialize(WorldGenerator *world_generator, unsigned int VBO, unsigned int OBO, unsigned int bufferOffset, Chunk *n, Chunk *e, Chunk *s, Chunk *w) {
+    m_worldGenerator = world_generator;
+    north = n;
+    east = e;
+    south = s;
+    west = w;
+    oboID = OBO;
+    vboID = VBO;
+    offset = bufferOffset;
+    m_initialized = true;
 }
 
 Chunk::~Chunk() {
@@ -31,66 +32,113 @@ Chunk::~Chunk() {
     if (!m_generated)
         return;
 
+    if (m_hasUnsavedChanges)
+        save();
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();
+}
 
-    if (nullptr != m_north) {
-        m_north->m_south = nullptr;
-    }
-    if (nullptr != m_east) {
-        m_east->m_west = nullptr;
-    }
-    if (nullptr != m_south) {
-        m_south->m_north = nullptr;
-    }
-    if (nullptr != m_west) {
-        m_west->m_east = nullptr;
+void Chunk::save() {
+    if (m_generated) {
+        std::ofstream chunkFile("./res/saves/default/" + chunkName);
+
+        st_chunk_disk_block current{ m_blocks[0].ID, 0}; // count is off by one, since no coutn wouldn't be saved
+        for (st_block *block_ptr = &m_blocks[1]; block_ptr - &m_blocks[0] < C_EXTEND*C_EXTEND*C_HEIGHT; block_ptr++) {
+            if (block_ptr->ID == current.ID && current.count < 255)
+                current.count++;
+            else {
+                chunkFile << current.ID << current.count;
+                current.ID = block_ptr->ID;
+                current.count = 0;
+            }
+        }
+        chunkFile << current.ID << current.count;
+        chunkFile.close();
     }
 }
 
-void Chunk::generate() {
-    for (int z = 0; z < C_EXTEND; z++) {
-        for (int x = 0; x < C_EXTEND; x++) {
-            m_worldGenerator->placeStack(
-                    x + (int) m_position.x * C_EXTEND, z + (int) m_position.z * C_EXTEND,
-                    &m_blocks[linearizeCoord(x, 0, z)]);
+void Chunk::generate(int cx, int cz) {
+    if (!chunkDestructionLock.try_lock())
+        return;
+
+    m_needUpdate = false;
+    m_generated = false;
+    m_position = glm::fvec3(cx, 0, cz);
+
+    chunkName = std::to_string(cx) + "x" + std::to_string(cz);
+
+    if (std::filesystem::exists("./res/saves/default/" + chunkName)) {
+        std::ifstream chunkFile("./res/saves/default/" + chunkName, std::ios::binary);
+
+        st_block *block_ptr = &m_blocks[0];
+        st_chunk_disk_block current{ m_blocks[0].ID, 0};
+        while (block_ptr - &m_blocks[0] < C_EXTEND*C_EXTEND*C_HEIGHT) {
+            chunkFile.read(reinterpret_cast<char*>(&current.ID), 2);
+            for (unsigned char i = 0; i <= current.count; i++) {
+                (block_ptr++)->ID = current.ID;
+            }
         }
+        chunkFile.close();
+    }
+    else {
+        for (int z = 0; z < C_EXTEND; z++) {
+            for (int x = 0; x < C_EXTEND; x++) {
+                m_worldGenerator->placeStack(
+                        x + m_position.x * C_EXTEND, z + m_position.z * C_EXTEND,
+                        &m_blocks[linearizeCoord(x, 0, z)]);
+            }
+        }
+        m_hasUnsavedChanges = true;
     }
     m_generated = true;
+    m_needUpdate = true;
+
+    fillSunlight();
+
+    north->m_needUpdate = true;
+    east->m_needUpdate = true;
+    south->m_needUpdate = true;
+    west->m_needUpdate = true;
+
+    chunkDestructionLock.unlock();
 }
 
 st_block& Chunk::getBlockRef(int x, int y, int z) {
-    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
-    if (!outOfBounds)
+    if (!m_initialized)
+        return AIR_BLOCK;
+
+    if (x >= 0 && y >= 0 && z >= 0 && x < C_EXTEND && z < C_EXTEND && y < C_HEIGHT)
         return m_blocks[linearizeCoord(x, y, z)];
-    else if (z >= C_EXTEND && m_north != nullptr)
-        return m_north->getBlockRef(x, y, z - C_EXTEND);
-    else if (x >= C_EXTEND && m_east != nullptr)
-        return m_east->getBlockRef(x - C_EXTEND, y, z);
-    else if (z < 0 && m_south != nullptr)
-        return m_south->getBlockRef(x, y, z + C_EXTEND);
-    else if (x < 0 && m_west != nullptr)
-        return m_west->getBlockRef(x + C_EXTEND, y, z);
+    else if (z >= C_EXTEND)
+        return north->getBlockRef(x, y, z - C_EXTEND);
+    else if (x >= C_EXTEND)
+        return east->getBlockRef(x - C_EXTEND, y, z);
+    else if (z < 0)
+        return south->getBlockRef(x, y, z + C_EXTEND);
+    else if (x < 0)
+        return west->getBlockRef(x + C_EXTEND, y, z);
     return AIR_BLOCK;
 }
 
 const st_block& Chunk::getBlock(int x, int y, int z) const {
-    bool outOfBounds = (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT);
-    if (!outOfBounds)
+    if (!m_initialized)
+        return AIR_BLOCK;
+
+    if (x >= 0 && y >= 0 && z >= 0 && x < C_EXTEND && z < C_EXTEND && y < C_HEIGHT)
         return m_blocks[linearizeCoord(x, y, z)];
-    else if (z >= C_EXTEND && m_north != nullptr)
-        return m_north->getBlock(x, y, z - C_EXTEND);
-    else if (x >= C_EXTEND && m_east != nullptr)
-        return m_east->getBlock(x - C_EXTEND, y, z);
-    else if (z < 0 && m_south != nullptr)
-        return m_south->getBlock(x, y, z + C_EXTEND);
-    else if (x < 0 && m_west != nullptr)
-        return m_west->getBlock(x + C_EXTEND, y, z);
+    else if (z >= C_EXTEND)
+        return north->getBlock(x, y, z - C_EXTEND);
+    else if (x >= C_EXTEND)
+        return east->getBlock(x - C_EXTEND, y, z);
+    else if (z < 0)
+        return south->getBlock(x, y, z + C_EXTEND);
+    else if (x < 0)
+        return west->getBlock(x + C_EXTEND, y, z);
     return AIR_BLOCK;
 }
 
-int Chunk::getCornerLight(int x, int y, int z) {
+int Chunk::getCornerLight(int x, int y, int z) const {
     const st_block& b111 = getBlock(x, y, z);
     const st_block& b101 = getBlock(x-1, y, z);
     const st_block& b110 = getBlock(x, y, z-1);
@@ -107,9 +155,8 @@ int Chunk::getCornerLight(int x, int y, int z) {
     );
 }
 
-void Chunk::addFace(short ID, const glm::ivec3 &pos,
-                    const glm::ivec3 &edgeA, const glm::ivec3 &edgeB) {
-
+void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB)
+{
     glm::ivec3 p00(pos);
     glm::ivec3 p10(pos + edgeA);
     glm::ivec3 p01(pos + edgeB);
@@ -182,19 +229,10 @@ void Chunk::addCross(int x, int y, int z, short block) {
             glm::ivec3(1, 0, -1),
             glm::ivec3(0, 1, 0)
     );
-
-    addFace(texID, glm::ivec3(x+1, y, z+1),
-            glm::ivec3(-1, 0, -1),
-            glm::ivec3(0, 1, 0)
-    );
-    addFace(texID, glm::ivec3(x+1, y, z),
-            glm::ivec3(-1, 0, 1),
-            glm::ivec3(0, 1, 0)
-    );
 }
 
 void Chunk::update() {
-    if (!m_generated || !chunkDestructionLock.try_lock())
+    if (!m_generated || !m_initialized || !chunkDestructionLock.try_lock())
         return;
 
     std::vector<glm::ivec3> updateBlocks;
@@ -211,8 +249,6 @@ void Chunk::update() {
         glm::ivec3 &p = updateBlocks[i];
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
-
-    vertexLock.lock();
     m_needUpdate = false;
     m_vertices.clear();
 
@@ -234,43 +270,40 @@ void Chunk::update() {
             }
         }
     }
+
     m_hasVertexUpdate = true;
-    vertexLock.unlock();
     chunkDestructionLock.unlock();
 }
 
-unsigned int Chunk::chunkBufferUpdate(int &availableChanges, unsigned int oboID) {
+unsigned int Chunk::chunkBufferUpdate(int &availableChanges) {
     if (!m_generated)
         return 0;
 
     if (!m_hasVertexUpdate)
         return vertexCount;
 
-    if (vertexLock.try_lock()) {
-        auto newVertexCount = static_cast<unsigned int>(m_vertices.size());
-        m_hasVertexUpdate = false;
+    auto newVertexCount = static_cast<unsigned int>(m_vertices.size());
+    m_hasVertexUpdate = false;
 
-        if (newVertexCount == 0) {
-            vertexLock.unlock();
-            vertexCount = 0;
-            return 0;
-        }
+    if (newVertexCount == 0) {
+        vertexCount = 0;
+        return 0;
+    }
+
+    if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
+        vertexCount = newVertexCount;
+        availableChanges--;
+        glNamedBufferSubData(oboID,
+                             offset * sizeof(glm::fvec3),
+                             sizeof(glm::fvec3),
+                             &m_position.x);
 
         auto segmentSize = static_cast<unsigned int>(newVertexCount * sizeof(st_vertex));
-        if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
-            vertexCount = newVertexCount;
-            availableChanges--;
-            glNamedBufferSubData(oboID,
-                                 offset * sizeof(glm::fvec3),
-                                 sizeof(glm::fvec3),
-                                 &m_position.x);
-            glNamedBufferSubData(vboID,
-                                 offset * sizeof(st_vertex) * CHUNK_BASE_VERTEX_OFFSET,
-                                 segmentSize,
-                                 &(m_vertices[0].position[0])
-            );
-        }
-        vertexLock.unlock();
+        glNamedBufferSubData(vboID,
+                             offset * sizeof(st_vertex) * CHUNK_BASE_VERTEX_OFFSET,
+                             segmentSize,
+                             &(m_vertices[0].position[0])
+        );
     }
 
     return vertexCount;
@@ -312,47 +345,32 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
 
     if (current.ID == BLOCK_ID::AIR && maxSunLight > current.getSunLight() + 1) {
         current.setSunLight(maxSunLight - 1);
+        m_hasUnsavedChanges = true;
 
         bool inBounds = (x > 0 && y > 0 & z > 0 && x+1 < C_EXTEND && z+1 < C_EXTEND && y+1 < C_HEIGHT);
 
-        if (glm::abs(t.getSunLight() - current.getSunLight()) > 1 && inBounds)
-        {
-            updateBlocks.emplace_back(x, y+1, z);
-        }
-        if (glm::abs(b.getSunLight() - current.getSunLight()) > 1 && inBounds) {
-            updateBlocks.emplace_back(x, y-1, z);
-        }
-
-        if (glm::abs(n.getSunLight() - current.getSunLight()) > 1) {
-            if (inBounds)
-                updateBlocks.emplace_back(x, y, z+1);
-            else {
-                if (m_north != nullptr)
-                    m_north->m_needUpdate = true;
+        if (inBounds) {
+            if (abs(t.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x, y + 1, z);
             }
-        }
-        if (glm::abs(e.getSunLight() - current.getSunLight()) > 1 && inBounds) {
-            if (inBounds)
-                updateBlocks.emplace_back(x+1, y, z);
-            else {
-                if (m_east != nullptr)
-                    m_east->m_needUpdate = true;
+            if (abs(b.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x, y - 1, z);
             }
-        }
-        if (glm::abs(s.getSunLight() - current.getSunLight()) > 1 && inBounds) {
-            if (inBounds)
-                updateBlocks.emplace_back(x, y, z-1);
-            else {
-                if (m_south != nullptr)
-                    m_south->m_needUpdate = true;
+            if (abs(n.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x, y, z + 1);
+                //north->m_needUpdate = true;
             }
-        }
-        if (glm::abs(w.getSunLight() - current.getSunLight()) > 1 && inBounds) {
-            if (inBounds)
-                updateBlocks.emplace_back(x-1, y, z);
-            else {
-                if (m_west != nullptr)
-                    m_west->m_needUpdate = true;
+            if (abs(e.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x + 1, y, z);
+                //east->m_needUpdate = true;
+            }
+            if (abs(s.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x, y, z - 1);
+                //south->m_needUpdate = true;
+            }
+            if (abs(w.getSunLight() - current.getSunLight()) > 1) {
+                updateBlocks.emplace_back(x - 1, y, z);
+                //west->m_needUpdate = true;
             }
         }
     }
@@ -362,6 +380,8 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
     short oldID = m_blocks[linearizeCoord(x, y, z)].ID;
     if (block != oldID) {
         m_blocks[linearizeCoord(x, y, z)].ID = block;
+        m_hasUnsavedChanges = true;
+
         if (!(block == DIRT || block == GRASS) && getBlock(x, y+1, z).ID == TALL_GRASS) {
             m_blocks[linearizeCoord(x, y+1, z)].ID = AIR;
         }
@@ -369,33 +389,33 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
             update();
         }
 
-        if (z == C_EXTEND-1 && nullptr != m_north) {
+        if (z == C_EXTEND-1) {
             if (forceUpdate) {
-                m_north->update();
+                north->update();
             }
             else
-                m_north->m_needUpdate = true;
+                north->m_needUpdate = true;
         }
-        if (x == C_EXTEND-1 && nullptr != m_east) {
+        if (x == C_EXTEND-1) {
             if (forceUpdate) {
-                m_east->update();
+                east->update();
             }
             else
-                m_east->m_needUpdate = true;
+                east->m_needUpdate = true;
         }
-        if (z == 0 && nullptr != m_south) {
+        if (z == 0) {
             if (forceUpdate) {
-                m_south->update();
+                south->update();
             }
             else
-                m_south->m_needUpdate = true;
+                south->m_needUpdate = true;
         }
-        if (x == 0 && nullptr != m_west) {
+        if (x == 0) {
             if (forceUpdate) {
-                m_west->update();
+                west->update();
             }
             else
-                m_west->m_needUpdate = true;
+                west->m_needUpdate = true;
         }
     }
 

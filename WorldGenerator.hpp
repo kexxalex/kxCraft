@@ -17,9 +17,9 @@ static constexpr unsigned char MAX_LIGHT = 15;
 static constexpr unsigned char LIGHT_MASK = 0b00001111; // 15
 
 struct st_block {
-    short ID{ 0 };
+    unsigned char ID{ 0 };
 
-    st_block(short ID=BLOCK_ID::AIR, unsigned char sunLight = 0, unsigned char torchLight = 0)
+    st_block(unsigned char ID=BLOCK_ID::AIR, unsigned char sunLight = 0, unsigned char torchLight = 0)
         : ID(ID), light(0)
     {
         light = ((torchLight & LIGHT_MASK) << 4) | (sunLight & LIGHT_MASK);

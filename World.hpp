@@ -10,8 +10,8 @@
 #include <vector>
 #include "Chunk.hpp"
 #include <unordered_map>
-#include <mutex>
 #include <iostream>
+#include <fstream>
 
 
 static constexpr int CHANGE_CHUNK_MAX = 1024;
@@ -30,36 +30,18 @@ struct st_DAIC {
 
 class World {
 public:
-    World() = default;
-    World(const glm::fvec3 &start_position, int seed, unsigned int renderDistance = 4, unsigned int threadCount = 2);
-
-    World &operator=(const World &world)
-    {
-        renderDistance = world.renderDistance;
-        threadCount = world.threadCount;
-        worldGenerator = world.worldGenerator;
-        playerPosition = world.playerPosition;
-        maxWorldExtend = 2 * renderDistance + 3;
-        chunks = new Chunk[maxWorldExtend * maxWorldExtend];
-
-        glm::ivec2 chunkPos;
-
-        toChunkPosition(playerPosition, chunkPos);
-        chunks[linearizeChunkPos(chunkPos)].build(&worldGenerator, chunkPos.x, chunkPos.y);
-        chunks[linearizeChunkPos(chunkPos)].generate();
-
-        return *this;
-    }
+    World() = delete;
+    World(const glm::fvec3 &start_position, int seed, int renderDistance = 4, int threadCount = 1);
+    ~World();
 
     void update(int threadID);
-    void cleanUp();
 
     inline void setPlayer(const glm::fvec3 &position, const glm::fvec3 &direction) {
         playerPosition = position;
         playerDirection = direction;
     }
 
-    void render(Shader &shader);
+    void render(bool indirect);
 
     void setInactive() { m_active = false; }
 
@@ -71,33 +53,51 @@ public:
 
     [[nodiscard]] inline float getRenderDistance() const { return static_cast<float>(renderDistance * C_EXTEND); }
     [[nodiscard]] inline bool isActive() const { return m_active; }
-    [[nodiscard]] inline int linearizeChunkPos(const glm::ivec2 &chunkPos) const {
-        return MOD(chunkPos.y + renderDistance + 1, maxWorldExtend) * maxWorldExtend + MOD(chunkPos.x + renderDistance + 1, maxWorldExtend);
+    [[nodiscard]] inline int linearizeChunkPos(const glm::ivec2 &chunkPosition) const {
+        return MOD(
+                MOD(chunkPosition.y, maxWorldExtend) * maxWorldExtend + MOD(chunkPosition.x, maxWorldExtend),
+                maxWorldExtend*maxWorldExtend);
     }
 
 private:
-    void updateChunk(const glm::ivec2 &position, int threadID);
     void updateChunkBuffers();
-    void updateIndirect();
+    int updateIndirect();
 
-    static inline void toChunkPosition(float x, float z, glm::ivec2 &chunkPos) {
-        chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) );
+    inline void generateChunk(const glm::ivec2 &position, int threadID) {
+        int linIndex = linearizeChunkPos(position);
+
+        if (threadID == -1) {
+            chunks[linIndex].generate(position.x, position.y);
+            return;
+        }
+        if (linIndex % threadCount != threadID)
+            return;
+
+        Chunk &chunk = chunks[linIndex];
+        bool isGenerated = chunk.isGenerated();
+        const glm::ivec2 currentPosition = chunk.getXZPosition();
+        if (!isGenerated || currentPosition != position) {
+            chunk.save();
+            chunk.generate(position.x, position.y);
+        }
     }
-    static inline void toChunkPosition(const glm::fvec3 &position, glm::ivec2 &chunkPos) {
-        return toChunkPosition(position.x, position.z, chunkPos);
+
+    static inline glm::ivec2 toChunkPosition(float x, float z) {
+        return { glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) };
+    }
+    static inline glm::ivec2 toChunkPosition(const glm::fvec3 &position) {
+        return toChunkPosition(position.x, position.z);
     }
 
     static inline void toChunkPositionAndOffset(float x, float z, glm::ivec2 &chunkPos, glm::ivec2 &inner) {
-        chunkPos = glm::ivec2( glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) );
+        chunkPos = toChunkPosition(x, z);
         inner = glm::ivec2(glm::floor(x - (float)chunkPos.x * C_EXTEND), glm::floor(z - (float)chunkPos.y * C_EXTEND));
-    }
-    static inline void toChunkPositionAndOffset(const glm::fvec3 &position, glm::ivec2 &chunkPos, glm::ivec2 &inner) {
-        toChunkPositionAndOffset(position.x, position.z, chunkPos, inner);
     }
 
     bool m_active{ true };
-    unsigned int renderDistance{ 6 };
-    unsigned int threadCount{ 1 };
+    int renderDistance{ 6 };
+    int maxWorldExtend{ 15 };
+    int threadCount{ 1 };
 
     WorldGenerator worldGenerator;
 
@@ -109,9 +109,9 @@ private:
     unsigned int oboID{ 0 };
     unsigned int iboID{ 0 };
 
-    unsigned int indirectCount{ 0 };
     bool hasChunkBufferChanges{ false };
 
-    unsigned int maxWorldExtend{ 0 };
+    GLsync indirectSync;
+    st_DAIC* indirectMapping{ nullptr };
     Chunk* chunks{ nullptr };
 };
