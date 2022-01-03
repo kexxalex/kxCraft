@@ -14,7 +14,7 @@
 #include <fstream>
 
 
-static constexpr int CHANGE_CHUNK_MAX = 1024;
+static constexpr int CHANGE_CHUNK_MAX = 8;
 
 inline int MOD(int n, int m) {
     return n % m + m * (n < 0);

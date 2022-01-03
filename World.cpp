@@ -159,6 +159,7 @@ void World::render(bool indirect) {
     glBindVertexArray(vaoID);
     if (indirect) {
         int indirectCount = updateIndirect();
+        glBindBuffer(GL_DRAW_INDIRECT_BUFFER, iboID);
         glMultiDrawArraysIndirect(GL_TRIANGLES, nullptr, indirectCount, 0);
     }
     else {
@@ -226,8 +227,6 @@ void World::initializeVertexArray() {
     glEnableVertexArrayAttrib(vaoID, 0);
     glEnableVertexArrayAttrib(vaoID, 1);
     glEnableVertexArrayAttrib(vaoID, 2);
-
-    glBindBuffer(GL_DRAW_INDIRECT_BUFFER, iboID);
 
     hasChunkBufferChanges = false;
 }

@@ -12,7 +12,9 @@ set(SOURCE_FILES main.cpp
         BMP.cpp BMP.hpp
         Texture.cpp Texture.hpp
         TextureManager.cpp TextureManager.hpp
-        Item.hpp Block.hpp Player.cpp Player.hpp)
+        Item.hpp Block.hpp
+        Player.cpp Player.hpp
+        HUD.cpp HUD.hpp)
 
 add_executable(kxCraft ${SOURCE_FILES})
 target_link_libraries(kxCraft -lGLEW -lglfw -lGL -lpthread -lnoise)

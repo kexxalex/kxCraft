@@ -16,7 +16,7 @@
 #include "WorldGenerator.hpp"
 #include "Shader.hpp"
 
-static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 16384;
+static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 16384/2*3;
 
 
 

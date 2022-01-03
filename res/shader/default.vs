@@ -1,14 +1,17 @@
-#version 330 core
+#version 450 core
 
 layout(location=0) in vec3 aPosition;
-layout(location=1) in float aLight;
+layout(location=1) in vec2 aUV;
+layout(location=2) in vec3 aNormal;
 
-uniform vec3 CHUNK_POSITION;
-uniform mat4 MVP;
+uniform mat4x4 MVP;
 
-out float vTexture;
+out vec2 vUV;
+out vec3 vNormal;
 
 void main() {
-    vTexture = aLight;
-    gl_Position = MVP * vec4(CHUNK_POSITION + aPosition.xyz, 1.0);
+    vNormal = aNormal;
+    vUV = aUV;
+
+    gl_Position = MVP * vec4(aPosition, 1.0);
 }

@@ -82,13 +82,7 @@ void Chunk::generate(int cx, int cz) {
         chunkFile.close();
     }
     else {
-        for (int z = 0; z < C_EXTEND; z++) {
-            for (int x = 0; x < C_EXTEND; x++) {
-                m_worldGenerator->placeStack(
-                        x + m_position.x * C_EXTEND, z + m_position.z * C_EXTEND,
-                        &m_blocks[linearizeCoord(x, 0, z)]);
-            }
-        }
+        m_worldGenerator->generate(cx, cz, &m_blocks[0]);
         m_hasUnsavedChanges = true;
     }
     m_generated = true;
@@ -169,12 +163,21 @@ void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, co
 void Chunk::addCube(int x, int y, int z, short block) {
     // Add top and bottom face
     const bool& connect = BLOCKS[block].connect;
-    if (isTransparent(x, y + 1, z))
+    const bool& translucent = BLOCKS[block].translucent;
+
+    const Block& t(getBlockAttributes(x, y + 1, z));
+    const Block& b(getBlockAttributes(x, y - 1, z));
+    const Block& n(getBlockAttributes(x, y, z + 1));
+    const Block& e(getBlockAttributes(x + 1, y, z));
+    const Block& s(getBlockAttributes(x, y, z - 1));
+    const Block& w(getBlockAttributes(x - 1, y, z));
+
+    if (t.transparent || t.translucent || translucent)
         addFace(BLOCKS[block].top,
                 glm::ivec3(x, y + 1, z),
                 glm::ivec3(0, 0, 1),
                 glm::ivec3(1, 0, 0));
-    if (isTransparent(x, y - 1, z))
+    if (b.transparent || b.translucent || translucent)
         addFace(BLOCKS[block].bottom,
                 glm::ivec3(x, y, z),
                 glm::ivec3(1, 0, 0),
@@ -182,12 +185,12 @@ void Chunk::addCube(int x, int y, int z, short block) {
 
 
     // Add north and south face
-    if (isTransparent(x, y, z + 1))
+    if (n.transparent || n.translucent || translucent)
         addFace((connect && getBlock(x, y-1, z+1).ID == block) ? BLOCKS[block].top : BLOCKS[block].north,
                 glm::ivec3(x, y, z + 1),
                 glm::ivec3(1, 0, 0),
                 glm::ivec3(0, 1, 0));
-    if (isTransparent(x, y, z - 1))
+    if (s.transparent || s.translucent || translucent)
         addFace((connect && getBlock(x, y-1, z-1).ID == block) ? BLOCKS[block].top : BLOCKS[block].south,
                 glm::ivec3(x + 1, y, z),
                 glm::ivec3(-1, 0, 0),
@@ -195,13 +198,13 @@ void Chunk::addCube(int x, int y, int z, short block) {
 
 
     // Add east and west face
-    if (isTransparent(x - 1, y, z)) {
+    if (w.transparent || w.translucent || translucent) {
         addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
                 glm::ivec3(x, y, z),
                 glm::ivec3(0, 0, 1),
                 glm::ivec3(0, 1, 0));
     }
-    if (isTransparent(x + 1, y, z))
+    if (e.transparent || e.translucent || translucent)
         addFace((connect && getBlock(x+1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].east,
                 glm::ivec3(x + 1, y, z + 1),
                 glm::ivec3(0, 0, -1),
@@ -314,7 +317,7 @@ void Chunk::fillSunlight() {
         for (int x = 0; x < C_EXTEND; x++) {
             bool sunShaft = true;
             for (int y = C_HEIGHT-1; y >= 0; y--) {
-                sunShaft = sunShaft && getBlockAttributes(x, y, z).transparent;
+                sunShaft = sunShaft && getBlockAttributes(x, y, z).translucent;
                 m_blocks[linearizeCoord(x, y, z)].setSunLight(MAX_LIGHT * sunShaft);
             }
         }
@@ -343,7 +346,7 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
             )
     );
 
-    if (current.ID == BLOCK_ID::AIR && maxSunLight > current.getSunLight() + 1) {
+    if (BLOCKS[current.ID].translucent && maxSunLight > current.getSunLight() + 1) {
         current.setSunLight(maxSunLight - 1);
         m_hasUnsavedChanges = true;
 

@@ -7,15 +7,7 @@
 
 #include "WorldGenerator.hpp"
 #include "Block.hpp"
-#include <glm/glm.hpp>
 
-inline double terrace(double val, int steps)
-{
-    const double terraceStep = 1.0 / steps;
-    double trc = glm::floor(val * steps) * terraceStep;
-
-    return trc + glm::smoothstep(0.0, terraceStep, 1.15 * (val - trc)) * terraceStep;
-}
 
 WorldGenerator::WorldGenerator(int seed) {
     mountainNoise.SetSeed(seed);
@@ -63,7 +55,7 @@ WorldGenerator &WorldGenerator::operator=(const WorldGenerator &wg) {
     return *this;
 }
 
-void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
+void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
     double mNoise = mountainNoise.GetValue(x, z, 0.0);
     double mountains = terrace(
             glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
@@ -73,8 +65,7 @@ void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
                                   + 12 * mNoise
     );
 
-    stack[0] = BEDROCK;
-    stack[0].setSunLight(0);
+    stack[0] = BLOCK_ID::BEDROCK;
 
     for (int y = 1; y < C_HEIGHT; y++) {
         if (y < height && caveNoise.GetValue(x, y * 1.5, z) < 0.8) {
@@ -83,17 +74,35 @@ void WorldGenerator::placeStack(int x, int z, st_block * stack) const {
         else {
             stack[y].ID = BLOCK_ID::AIR;
         }
-        stack[y].setSunLight(0);
     }
 
     if (caveNoise.GetValue(x, height * 1.5, z) < 0.8) {
         stack[height].ID = BLOCK_ID::GRASS;
-        stack[height].setSunLight(0);
 
         double onVal = oreNoise.GetValue(x, height+1, z);
         if (onVal > -0.1 && onVal < 0.1) {
             stack[height + 1].ID = BLOCK_ID::TALL_GRASS;
-            stack[height + 1].setSunLight(MAX_LIGHT);
+        }
+    }
+}
+
+void WorldGenerator::placeOakTree(int x, int y, int z, st_block *blocks) const {
+    if (x >= 0 && y >= 0 && z >= 0 && x < C_EXTEND && z < C_EXTEND) {
+        for (int dy = 0; dy < OAK_TREE_HEIGHT && y + dy < C_HEIGHT; dy++)
+            blocks[linearizeCoord(x, y + dy, z)].ID = BLOCK_ID::OAK_LOG;
+    }
+
+    for (int dx = -OAK_TREE_RADIUS; dx <= OAK_TREE_RADIUS; dx++) {
+        for (int dz = -OAK_TREE_RADIUS; dz <= OAK_TREE_RADIUS; dz++) {
+            for (int dy = -OAK_TREE_RADIUS; dy <= OAK_TREE_RADIUS; dy++) {
+                if (x+dx >= 0 && y+dy+OAK_TREE_HEIGHT >= 0 && z+dz >= 0
+                    && x+dx < C_EXTEND && y+dy+OAK_TREE_HEIGHT < C_HEIGHT && z+dz < C_EXTEND
+                    && abs(dx) + abs(dy) + abs(dz) < 3*OAK_TREE_RADIUS)
+                {
+                    if (blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID == BLOCK_ID::AIR)
+                        blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID = BLOCK_ID::OAK_LEAVES;
+                }
+            }
         }
     }
 }

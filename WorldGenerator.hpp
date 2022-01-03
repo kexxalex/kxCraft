@@ -8,6 +8,7 @@
 #pragma once
 
 #include <libnoise/noise.h>
+#include <glm/glm.hpp>
 #include "Block.hpp"
 
 
@@ -15,6 +16,17 @@ static constexpr int C_EXTEND = 16;
 static constexpr int C_HEIGHT = 256;
 static constexpr unsigned char MAX_LIGHT = 15;
 static constexpr unsigned char LIGHT_MASK = 0b00001111; // 15
+
+static constexpr int OAK_TREE_HEIGHT = 5;
+static constexpr int OAK_TREE_RADIUS = 2;
+
+inline double terrace(double val, int steps)
+{
+    const double terraceStep = 1.0 / steps;
+    double trc = glm::floor(val * steps) * terraceStep;
+
+    return trc + glm::smoothstep(0.0, terraceStep, 1.15 * (val - trc)) * terraceStep;
+}
 
 struct st_block {
     unsigned char ID{ 0 };
@@ -57,7 +69,33 @@ public:
 
     WorldGenerator& operator=(const WorldGenerator& wg);
 
-    void placeStack(int x, int z, st_block * stack) const;
+    void placeStack(int x, int z, st_block *stack) const;
+    void placeOakTree(int x, int y, int z, st_block *blocks) const;
+    inline void generate(int cx, int cz, st_block *blocks) const {
+        for (int z = 0; z < C_EXTEND; z++) {
+            for (int x = 0; x < C_EXTEND; x++) {
+                placeStack(x + cx * C_EXTEND, z + cz * C_EXTEND, &blocks[linearizeCoord(x, 0, z)]);
+            }
+        }
+
+        for (int z = -OAK_TREE_RADIUS; z <= C_EXTEND+OAK_TREE_RADIUS; z++) {
+            for (int x = -OAK_TREE_RADIUS; x <= C_EXTEND+OAK_TREE_RADIUS; x++) {
+                double mNoise = mountainNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
+                double mountains = terrace(
+                        glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
+                        6);
+                int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains)
+                                              + 3 * meadowNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0)
+                                              + 12 * mNoise
+                );
+
+                double ore = oreNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
+
+                if (ore > 0.5 && ore < 0.505)
+                    placeOakTree(x, height, z, blocks);
+            }
+        }
+    }
 
 private:
     noise::module::Billow mountainNoise;
