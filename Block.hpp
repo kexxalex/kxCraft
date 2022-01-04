@@ -9,7 +9,7 @@
 
 enum TEX_ID {
     T_AIR = 0,
-    T_GRASS_TOP=1, T_GRASS=1, T_SNOW_TOP, T_SNOW=2, T_SAND, T_DIRT, T_STONE, T_BEDROCK,
+    T_GRASS_TOP = 1, T_GRASS = 1, T_SNOW_TOP, T_SNOW = 2, T_SAND, T_DIRT, T_STONE, T_BEDROCK,
     T_OAK_LOG_SIDE, T_OAK_LOG_TOP, T_OAK_LEAVES,
     T_COAL_ORE, T_IRON_ORE, T_GOLD_ORE, T_REDSTONE_ORE, T_LAPIS_ORE, T_DIAMOND_ORE, T_EMERALD_ORE,
     T_GRASS_SIDE, T_SNOW_SIDE, T_OAK_PLANKS, T_COBBLESTONE, T_STONEBRICKS, T_BRICKS,
@@ -17,7 +17,7 @@ enum TEX_ID {
     T_COAL_BLOCK, T_IRON_BLOCK, T_GOLD_BLOCK, T_REDSTONE_BLOCK, T_LAPIS_BLOCK, T_DIAMOND_BLOCK, T_EMERALD_BLOCK,
     T_GLASS, T_OVEN_FRONT_ON, T_OVEN_FRONT_OFF, T_OVEN_BACK, T_OVEN_TOP,
 
-    T_TALL_GRASS = 241,
+    T_TALL_GRASS = 241, T_TULIP, T_SUNFLOWER, T_LILY,
     T_SELECTION = 256
 };
 
@@ -61,24 +61,40 @@ public:
 
 
 static Block BLOCKS[256]{
-        {"Air",         T_AIR,       true,   false, false, true},
-        {"Grass",       T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, false, true, true},
+        {"Air",         T_AIR,         true,          false,        false, true},
+        {"Grass",       T_GRASS_TOP,   T_DIRT,        T_GRASS_SIDE, false, true, true},
         {"Stone",       T_STONE},
         {"Dirt",        T_DIRT},
         {"Wood Planks", T_OAK_PLANKS},
         {"Cobblestone", T_COBBLESTONE},
         {"Bedrock",     T_BEDROCK},
-        {"Tall Grass",  T_TALL_GRASS, true, false, false, true, R_CROSS},
-        {"Oak Log", T_OAK_LOG_TOP, T_OAK_LOG_TOP, T_OAK_LOG_SIDE},
-        {"Oak Leaves", T_OAK_LEAVES, true, true},
-        {"Glass", T_GLASS, true, true, false, true},
+        {"Tall Grass",  T_TALL_GRASS,  true,          false,        false, true, R_CROSS},
+        {"Tulip",       T_TULIP,       true,          false,        false, true, R_CROSS},
+        {"Sunflower",   T_SUNFLOWER,   true,          false,        false, true, R_CROSS},
+        {"Lily",        T_LILY,        true,          false,        false, true, R_CROSS},
+        {"Oak Log",     T_OAK_LOG_TOP, T_OAK_LOG_TOP, T_OAK_LOG_SIDE},
+        {"Oak Leaves",  T_OAK_LEAVES,  true,          true},
+        {"Glass",       T_GLASS,       true,          true,         false, true},
 
-        {"Selection", T_SELECTION, true}
+        {"Selection",   T_SELECTION,   true}
 
 };
 
 enum BLOCK_ID {
-    AIR, GRASS, STONE, DIRT, WOOD_PLANKS, COBBLESTONE, BEDROCK, TALL_GRASS, OAK_LOG, OAK_LEAVES, GLASS,
+    AIR,
+    GRASS,
+    STONE,
+    DIRT,
+    WOOD_PLANKS,
+    COBBLESTONE,
+    BEDROCK,
+    TALL_GRASS,
+    TULIP,
+    SUNFLOWER,
+    LILY,
+    OAK_LOG,
+    OAK_LEAVES,
+    GLASS,
     SELECTION
 };
 

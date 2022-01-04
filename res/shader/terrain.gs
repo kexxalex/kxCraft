@@ -37,7 +37,7 @@ void main() {
 
     vec3 wave = vec3(0);
     gNormal = normalize(cross(edgeA, edgeB));
-    if (gTextureID == 240) {
+    if (gTextureID >= 240 && gTextureID <= 243) {
         wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
     }
     else if (HUD || gTextureID != 8) {

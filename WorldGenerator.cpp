@@ -26,7 +26,7 @@ WorldGenerator::WorldGenerator(int seed) {
     caveNoise.SetFrequency(1.0 / 64.0);
 
     oreNoise.SetSeed(seed - 2367);
-    oreNoise.SetOctaveCount(4);
+    oreNoise.SetOctaveCount(5);
     oreNoise.SetNoiseQuality(noise::NoiseQuality::QUALITY_BEST);
     oreNoise.SetFrequency(1.0 / 16.0);
 }
@@ -80,8 +80,14 @@ void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
         stack[height].ID = BLOCK_ID::GRASS;
 
         double onVal = oreNoise.GetValue(x, height+1, z);
-        if (onVal > -0.1 && onVal < 0.1) {
+        if ((onVal > -0.1 && onVal < 0.1) || (abs(onVal) > 0.5 && abs(onVal) < 0.55)) {
             stack[height + 1].ID = BLOCK_ID::TALL_GRASS;
+        } else if (onVal > 0.8 && onVal < 0.82) {
+            stack[height + 1].ID = BLOCK_ID::TULIP;
+        } else if (onVal > -0.83 && onVal < -0.8) {
+            stack[height + 1].ID = BLOCK_ID::SUNFLOWER;
+        } else if (abs(onVal) > 0.99 && abs(onVal) < 0.9975) {
+            stack[height + 1].ID = BLOCK_ID::LILY;
         }
     }
 }
