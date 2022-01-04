@@ -46,7 +46,7 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
 <br>The required headers for this scenario are already included in the **kxCraft\windows** directory.
  1. Start a Command Line or Powershell in the kxCraft folder.
  2. Now you can use the following instruction to compile the source code to **kxCraft.exe** (64 bit) <br>
-`clang++ *.cpp -std=c++17  -o kxCraft.exe -O3 -I./windows/include/ -L./windows/lib/ -lglew -lglfw3dll -lOpenGL32 -LibNoise64`
+`clang++ *.cpp -std=c++17  -o kxCraft.exe -O3 -I./windows/include/ -L./windows/lib/ -lglew -lglfw3dll -lOpenGL32 -lLibNoise64`
 
 ## Screenshot
 ![kxCraft Hello](https://github.com/kexxalex/kxCraft/blob/master/kxCraft-Hello.png)
