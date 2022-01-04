@@ -132,31 +132,43 @@ const st_block& Chunk::getBlock(int x, int y, int z) const {
     return AIR_BLOCK;
 }
 
-int Chunk::getCornerLight(int x, int y, int z) const {
-    const st_block& b111 = getBlock(x, y, z);
-    const st_block& b101 = getBlock(x-1, y, z);
-    const st_block& b110 = getBlock(x, y, z-1);
-    const st_block& b100 = getBlock(x-1, y, z-1);
+int Chunk::getCornerLight(int x, int y, int z, int dir) const {
+    short b111 = getBlock(x, y, z).getLight();
+    short b101 = getBlock(x-1, y, z).getLight();
+    short b110 = getBlock(x, y, z-1).getLight();
+    short b100 = getBlock(x-1, y, z-1).getLight();
 
-    const st_block& b011 = getBlock(x, y - 1, z);
-    const st_block& b001 = getBlock(x-1, y - 1, z);
-    const st_block& b010 = getBlock(x, y - 1, z-1);
-    const st_block& b000 = getBlock(x-1, y - 1, z-1);
+    short b011 = getBlock(x, y - 1, z).getLight();
+    short b001 = getBlock(x-1, y - 1, z).getLight();
+    short b010 = getBlock(x, y - 1, z-1).getLight();
+    short b000 = getBlock(x-1, y - 1, z-1).getLight();
 
-    return (
-            (b111.getLight() + b101.getLight() + b110.getLight() + b100.getLight() +
-            b011.getLight() + b001.getLight() + b010.getLight() + b000.getLight())
-    );
+    switch (dir) {
+        case 0: // Top facing
+            return b111 + b101 + b110 + b100;
+        case 1: // Bottom facing
+            return b011 + b001 + b010 + b000;
+        case 2: // North facing
+            return b111 + b101 + b011 + b001;
+        case 3: // East facing
+            return b111 + b110 + b011 + b010;
+        case 4: // South facing
+            return b110 + b100 + b010 + b000;
+        case 5: // West facing
+            return b101 + b100 + b001 + b000;
+        default:
+            return 0;
+    }
 }
 
-void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB){
+void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB, int dir){
     glm::ivec3 p00(pos);
     glm::ivec3 p10(pos + edgeA);
     glm::ivec3 p01(pos + edgeB);
     glm::ivec3 p11(pos + edgeA + edgeB);
-    m_vertices.emplace_back(pos, ID, getCornerLight(p00.x, p00.y, p00.z));
-    m_vertices.emplace_back(pos + edgeA, getCornerLight(p11.x, p11.y, p11.z), getCornerLight(p10.x, p10.y, p10.z));
-    m_vertices.emplace_back(pos + edgeB, 0, getCornerLight(p01.x, p01.y, p01.z));
+    m_vertices.emplace_back(pos, ID, getCornerLight(p00.x, p00.y, p00.z, dir));
+    m_vertices.emplace_back(pos + edgeA, getCornerLight(p11.x, p11.y, p11.z, dir), getCornerLight(p10.x, p10.y, p10.z, dir));
+    m_vertices.emplace_back(pos + edgeB, 0, getCornerLight(p01.x, p01.y, p01.z, dir));
 }
 
 void Chunk::addCube(int x, int y, int z, short block) {
@@ -175,12 +187,12 @@ void Chunk::addCube(int x, int y, int z, short block) {
         addFace(BLOCKS[block].top,
                 glm::ivec3(x, y + 1, z),
                 glm::ivec3(0, 0, 1),
-                glm::ivec3(1, 0, 0));
+                glm::ivec3(1, 0, 0), 0);
     if (b.transparent || b.translucent || translucent)
         addFace(BLOCKS[block].bottom,
                 glm::ivec3(x, y, z),
                 glm::ivec3(1, 0, 0),
-                glm::ivec3(0, 0, 1));
+                glm::ivec3(0, 0, 1), 1);
 
 
     // Add north and south face
@@ -188,26 +200,26 @@ void Chunk::addCube(int x, int y, int z, short block) {
         addFace((connect && getBlock(x, y-1, z+1).ID == block) ? BLOCKS[block].top : BLOCKS[block].north,
                 glm::ivec3(x, y, z + 1),
                 glm::ivec3(1, 0, 0),
-                glm::ivec3(0, 1, 0));
+                glm::ivec3(0, 1, 0), 2);
     if (s.transparent || s.translucent || translucent)
         addFace((connect && getBlock(x, y-1, z-1).ID == block) ? BLOCKS[block].top : BLOCKS[block].south,
                 glm::ivec3(x + 1, y, z),
                 glm::ivec3(-1, 0, 0),
-                glm::ivec3(0, 1, 0));
+                glm::ivec3(0, 1, 0), 3);
 
 
     // Add east and west face
-    if (w.transparent || w.translucent || translucent) {
-        addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
-                glm::ivec3(x, y, z),
-                glm::ivec3(0, 0, 1),
-                glm::ivec3(0, 1, 0));
-    }
     if (e.transparent || e.translucent || translucent)
         addFace((connect && getBlock(x+1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].east,
                 glm::ivec3(x + 1, y, z + 1),
                 glm::ivec3(0, 0, -1),
-                glm::ivec3(0, 1, 0));
+                glm::ivec3(0, 1, 0), 4);
+    if (w.transparent || w.translucent || translucent) {
+        addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
+                glm::ivec3(x, y, z),
+                glm::ivec3(0, 0, 1),
+                glm::ivec3(0, 1, 0), 5);
+    }
 }
 
 void Chunk::addCross(int x, int y, int z, short block) {
@@ -225,11 +237,13 @@ void Chunk::addCross(int x, int y, int z, short block) {
 
     addFace(texID, glm::ivec3(x, y, z),
             glm::ivec3(1, 0, 1),
-            glm::ivec3(0, 1, 0)
+            glm::ivec3(0, 1, 0),
+            0
     );
     addFace(texID, glm::ivec3(x, y, z+1),
             glm::ivec3(1, 0, -1),
-            glm::ivec3(0, 1, 0)
+            glm::ivec3(0, 1, 0),
+            0
     );
 }
 

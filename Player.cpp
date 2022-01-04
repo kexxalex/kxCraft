@@ -116,6 +116,7 @@ void Player::handleKeys(GLFWwindow *window, const double &time, const double &dT
     double angle = glm::radians(cameraAngle.x);
 
     float speed = 1.0f + RUN_MULTI * static_cast<float>(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT));
+    walking = -1.0f;
 
     if (glfwGetKey(window, GLFW_KEY_W)) {
         walking = time;

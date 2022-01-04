@@ -36,15 +36,11 @@ void main() {
     gTextureID = vTexture[0];
 
     vec3 wave = vec3(0);
-    if (gTextureID == 39) {
-        gNormal = vec3(0, 1, 0);
+    gNormal = normalize(cross(edgeA, edgeB));
+    if (gTextureID == 240) {
         wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
     }
-    else if (!HUD && (gTextureID == 52 || gTextureID == 49)) {
-        gNormal = normalize(cross(edgeA, edgeB));
-    }
-    else {
-        gNormal = normalize(cross(edgeA, edgeB));
+    else if (HUD || gTextureID != 8) {
         // Cull face of blocks
         if (dot(gNormal, delta) < 0)
             return;

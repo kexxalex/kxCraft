@@ -22,8 +22,8 @@
 static GLFWwindow *WINDOW = nullptr;
 static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
-static int WIDTH = 2560;
-static int HEIGHT = 1080;
+static int WIDTH = 1600;
+static int HEIGHT = 900;
 static constexpr bool VSYNC = true;
 static constexpr int THREAD_COUNT = 1;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
@@ -70,7 +70,7 @@ bool initGLWindow() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", glfwGetPrimaryMonitor(), nullptr);
+    WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
     if (!WINDOW) {
         std::cerr << "Couldn't create GLFW window" << std::endl;
         glfwTerminate();
@@ -99,6 +99,7 @@ void worldUpdaterThread(int thrID) {
         WORLD->update(thrID);
         FIRST_UPDATE[thrID] = true;
     }
+    std::cout << "Quit Thread " << thrID << std::endl;
 }
 
 
@@ -164,8 +165,12 @@ int main() {
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
 
-    static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/terrain.bmp");
+    static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/diffuse.bmp");
+    static auto NORMAL = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/normal.bmp");
+    static auto SPECULAR = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/specular.bmp");
     DIFFUSE->BindTo(0);
+    NORMAL->BindTo(1);
+    SPECULAR->BindTo(2);
 
     WORLD = new World({0, 0, 0}, 4562, 16, THREAD_COUNT);
     WORLD->initializeVertexArray();

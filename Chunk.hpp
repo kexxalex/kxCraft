@@ -57,9 +57,9 @@ private:
     bool m_hasUnsavedChanges{ false };
 
     [[nodiscard]] st_block& getBlockRef(int x, int y, int z);
-    [[nodiscard]] inline int getCornerLight(int x, int y, int z) const;
+    [[nodiscard]] inline int getCornerLight(int x, int y, int z, int dir) const;
 
-    void addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB);
+    void addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB, int dir);
     void addCube(int x, int y, int z, short block);
     void addCross(int x, int y, int z, short block);
     void fillSunlight();

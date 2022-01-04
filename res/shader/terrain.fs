@@ -2,6 +2,8 @@
 layout(location=0) out vec3 outFragColor;
 
 layout(binding=0) uniform sampler2D DIFFUSE;
+layout(binding=1) uniform sampler2D NORMAL;
+layout(binding=2) uniform sampler2D SPECULAR;
 
 uniform float INV_RENDER_DIST;
 uniform float TIME;
@@ -27,14 +29,14 @@ void main() {
     );
 
     // Directional sun light
-    vec3 lightDir = normalize(vec3(0.5f, -1.0f, 0.25f));
-    float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.7f + 0.4f);
-    if (gTextureID == 52) {
-        dLight = max(min(1.2f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.7f + 0.4f), dLight);
+    vec3 lightDir = normalize(vec3(0.25f, -1.0f, 0.25f));
+    float dLight = min(1.0f, max(0.0f, dot(-lightDir, gNormal)) * 0.5f + 0.7f);
+    if (gTextureID == 8 || gTextureID == 240) {
+        dLight = max(min(1.0f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.5f + 0.7f), dLight);
     }
 
     // Ambient Light from occlusion
-    float aLight = min(bilinearLight, 1.0f) * 0.95f + 0.05;
+    float aLight = pow(min(bilinearLight, 1.0f), 1.5) + 0.1;
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;
