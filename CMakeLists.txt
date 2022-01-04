@@ -14,7 +14,8 @@ set(SOURCE_FILES main.cpp
         TextureManager.cpp TextureManager.hpp
         Item.hpp Block.hpp
         Player.cpp Player.hpp
-        HUD.cpp HUD.hpp)
+        HUD.cpp HUD.hpp
+        3Dutils.hpp 3Dutils.cpp)
 
 add_executable(kxCraft ${SOURCE_FILES})
 target_link_libraries(kxCraft -lGLEW -lglfw -lGL -lpthread -lnoise)

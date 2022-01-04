@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
 #include <vector>
 #include <mutex>
 
@@ -15,24 +14,11 @@
 #include "Block.hpp"
 #include "WorldGenerator.hpp"
 #include "Shader.hpp"
+#include "3Dutils.hpp"
 
 static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 16384/2*3;
 
 
-
-
-struct st_vertex {
-    unsigned char position[3]{ 0, 0, 0};
-    unsigned char ID;
-    short light{ 0 };
-
-    st_vertex() = default;
-    st_vertex(const glm::ivec3& pos, short texID, short light)
-        : position{(unsigned char)pos.x, (unsigned char)pos.y, (unsigned char)pos.z}, ID(texID), light(light)
-    {
-
-    }
-};
 
 class Chunk {
 public:

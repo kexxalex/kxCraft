@@ -13,5 +13,5 @@ void main() {
     vTexture = int(aPositionWithID.w);
     vLight = int(aLight);
 
-    gl_Position = vec4(aChunkPosition * 16.0 + aPositionWithID.xyz, 1.0);
+    gl_Position = vec4(aChunkPosition + aPositionWithID.xyz, 1.0);
 }

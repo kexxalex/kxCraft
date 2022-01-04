@@ -107,3 +107,29 @@ void WorldGenerator::placeOakTree(int x, int y, int z, st_block *blocks) const {
     }
 }
 
+void WorldGenerator::generate(int cx, int cz, st_block *blocks) const {
+    for (int z = 0; z < C_EXTEND; z++) {
+        for (int x = 0; x < C_EXTEND; x++) {
+            placeStack(x + cx * C_EXTEND, z + cz * C_EXTEND, &blocks[linearizeCoord(x, 0, z)]);
+        }
+    }
+
+    for (int z = -OAK_TREE_RADIUS; z <= C_EXTEND+OAK_TREE_RADIUS; z++) {
+        for (int x = -OAK_TREE_RADIUS; x <= C_EXTEND+OAK_TREE_RADIUS; x++) {
+            double mNoise = mountainNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
+            double mountains = terrace(
+                    glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
+                    6);
+            int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains)
+                                          + 3 * meadowNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0)
+                                          + 12 * mNoise
+            );
+
+            double ore = oreNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
+
+            if (abs(0.5 - abs(ore)) > 0.498 && abs(mountainNoise.GetValue(z + cz * C_EXTEND, 0.0, z + cz * C_EXTEND)) > 0.75)
+                placeOakTree(x, height, z, blocks);
+        }
+    }
+}
+

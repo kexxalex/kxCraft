@@ -27,10 +27,10 @@ void main() {
 
     // Directional sun light
     vec3 lightDir = normalize(vec3(0.5f, -1.0f, 0.25f));
-    float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.7f + 0.4f);
+    float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.6f + 0.5f);
 
     // Ambient Light from occlusion
-    float aLight = min(bilinearLight, 1.0f) * 0.9f + 0.1;
+    float aLight = min(bilinearLight*1.125 - 0.125, 1.0f) * 0.9f + 0.1;
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;

@@ -22,10 +22,10 @@
 static GLFWwindow *WINDOW = nullptr;
 static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
-static int WIDTH = 1600;
-static int HEIGHT = 900;
+static int WIDTH = 2560;
+static int HEIGHT = 1080;
 static constexpr bool VSYNC = true;
-static constexpr int THREAD_COUNT = 6;
+static constexpr int THREAD_COUNT = 1;
 static bool FIRST_UPDATE[THREAD_COUNT] = { false };
 static World *WORLD = nullptr;
 static Player *PLAYER = nullptr;
@@ -40,6 +40,11 @@ void loadShader() {
     shader.setBool("DISTANCE_CULLING", true);
 }
 
+static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    PLAYER->addAngle(xpos - WIDTH * 0.5, ypos - HEIGHT * 0.5);
+    glfwSetCursorPos(WINDOW, 0.5 * WIDTH, 0.5 * HEIGHT);
+}
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
@@ -48,6 +53,13 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_R && action == GLFW_RELEASE) {
         WORLD->reloadCurrentChunk();
+    }
+}
+
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+    if (PLAYER != nullptr) {
+        PLAYER->scrollItems(-yoffset);
     }
 }
 
@@ -63,7 +75,7 @@ bool initGLWindow() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
+    WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", glfwGetPrimaryMonitor(), nullptr);
     if (!WINDOW) {
         std::cerr << "Couldn't create GLFW window" << std::endl;
         glfwTerminate();
@@ -72,6 +84,8 @@ bool initGLWindow() {
 
     glfwSetKeyCallback(WINDOW, key_callback);
     glfwSetWindowSizeCallback(WINDOW, window_size_callback);
+    glfwSetScrollCallback(WINDOW, scroll_callback);
+    glfwSetCursorPosCallback(WINDOW, cursor_position_callback);
     glfwMakeContextCurrent(WINDOW);
 
     if (glewInit() != GLEW_OK) {
@@ -123,8 +137,11 @@ void render() {
     terrainShader.setMatrixFloat4("MVP", MVP);
     terrainShader.setFloat3("PLAYER_POSITION", playerEyePosition);
     terrainShader.setFloat("TIME", (float)time);
+    terrainShader.setBool("HUD", false);
 
     WORLD->render(glfwGetKey(WINDOW, GLFW_KEY_LEFT_ALT));
+    terrainShader.setBool("HUD", true);
+    PLAYER->render();
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -150,10 +167,6 @@ int main() {
 
     std::cout << "OpenGL " << glGetString(GL_VERSION) << std::endl;
 
-    glClearColor(0.75, 0.9, 1.0, 1.0);
-    glClearDepth(1.0);
-    glEnable(GL_DEPTH_TEST);
-
     SHADER_MANAGER.initialize();
     TEXTURE_MANAGER.initialize(4);
 
@@ -173,6 +186,9 @@ int main() {
         worldUpdater[i] = std::thread(worldUpdaterThread, i);
     }
 
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClearDepth(1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
     while (true) {
         bool allFinished = false;
         for (bool thr : FIRST_UPDATE) {
@@ -187,18 +203,17 @@ int main() {
     }
 
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-    glfwSetCursorPos(WINDOW, WIDTH * 0.5, HEIGHT * 0.5);
+    if (glfwRawMouseMotionSupported())
+        glfwSetInputMode(WINDOW, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
+    glClearColor(0.75, 0.9, 1.0, 1.0);
+    glClearDepth(1.0);
+    glEnable(GL_DEPTH_TEST);
     loadShader();
 
     while (!glfwWindowShouldClose(WINDOW)) {
         render();
         glfwPollEvents();
-
-        glm::dvec2 mouse;
-        glfwGetCursorPos(WINDOW, &mouse.x, &mouse.y);
-        glfwSetCursorPos(WINDOW, static_cast<double>(WIDTH / 2), static_cast<double>(HEIGHT / 2));
-        PLAYER->addAngle((mouse - glm::dvec2{WIDTH / 2, HEIGHT / 2}));
     }
 
     std::cout << "Exit game" << std::endl;

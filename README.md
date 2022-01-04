@@ -5,7 +5,8 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
 ## Feature list
 - [x] Multithreaded world loader
 - [x] GLSL Vertex, Fragment and Geometry Shader
-- [x] Angle view culling using __*glMultiDrawIndirect*__
+- [x] Angle view culling using __*glMultiDrawIndirect*__ or loop with __*glDrawArraysInstancedBaseInstance*__
+  - Switch by holding ALT-key. Default is the loop because most systems GL call overhead is neglectable
 - [x] Highly optimized memory management
   - Compact vertex struct (6Bytes) which increases FPS (up to 10%) and decreases memory usage
   - Geometry Shader calculates normals, UVs and the fourth vertex for each quad 
@@ -14,16 +15,15 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
 - [x] Lighting system
 - [x] Collision detection
 - [x] Basic player movement
-- [x] Generate decoration like grass (flowers and trees coming soon)
-- [x] Build and destroy blocks (currently no indicator)
+- [x] Generate decoration like grass and trees
+- [x] Build and destroy blocks
+- [x] 3D HUD
 - [ ] PBR Shader
 
 ## Currently working on
-1. 3D block selection inidicator
-2. Menus
-3. Optimizing __*ShaderManager*__ and __*TextureManager*__ class
-4. Generate flowers and trees
-5. Custom textures
+1. Menus
+2. Optimizing __*TextureManager*__ class
+3. Custom textures
 
 
 
@@ -44,7 +44,7 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
 ## Compiling for Windows x64
 **Assuming you have MS Visual Studio and clang++.** For other compilers you probably know what to do, by looking at this statement.
 <br>The required headers for this scenario are already included in the **kxCraft\windows** directory.
- 1. Start a Command Line or Powershell in the kxCraft directory.
+ 1. Start a Command Line or Powershell in the kxCraft folder.
  2. Now you can use the following instruction to compile the source code to **kxCraft.exe** (64 bit) <br>
 `clang++ *.cpp -std=c++17  -o kxCraft.exe -O3 -I./windows/include/ -L./windows/lib/ -lglew -lglfw3dll -lOpenGL32 -LibNoise64`
 

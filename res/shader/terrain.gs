@@ -9,6 +9,7 @@ uniform mat4 MVP;
 uniform float TIME;
 uniform vec3 PLAYER_POSITION;
 uniform bool DISTANCE_CULLING;
+uniform bool HUD;
 
 out vec3 gNormal;
 out vec2 gFace;
@@ -27,6 +28,9 @@ void main() {
 
     vec3 edgeA = gl_in[1].gl_Position.xyz - pos;
     vec3 edgeB = gl_in[2].gl_Position.xyz - pos;
+    if (HUD) {
+        pos -= 0.5f;
+    }
 
     vec3 wave = vec3(0);
     if (vTexture[0] == 39) {

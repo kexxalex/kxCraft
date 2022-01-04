@@ -7,20 +7,44 @@
 #include "Block.hpp"
 #include <iostream>
 
-static constexpr double MOUSE_SPEED = 0.1;
+static constexpr double MOUSE_SPEED = 0.02;
 static constexpr float MOVEMENT_SPEED = 3.5f;
+static constexpr float RUN_MULTI = 0.5f;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
         : position(position), bbox(bbox), world(world) {
 
 }
 
+void Player::render() {
+    glDisable(GL_DEPTH_TEST);
+    auto eye = getEyePosition();
+    hud.begin();
+    if (hasHeadingBlock) {
+        hud.addBlock(headingBlock + 0.5f, BLOCK_ID::SELECTION, 255);
+    }
+
+    static const int count = sizeof(BUILDABLE) / sizeof(BUILDABLE[0]);
+    for (int i = 0; i < count; i++) {
+        if (i != blockID) {
+            float interp = 1/(1 + pow(i-blockID, 4));
+            hud.addBlockScreenSpace(TBN, eye,
+                                    {-count + i * 2.0f + 1.0f, -19.0f + interp, 24.0f - 8.0f * interp},
+                                    BUILDABLE[i], 30);
+        }
+    }
+    hud.addBlockScreenSpace(TBN, eye, {-count + blockID * 2.0f + 1.0f, -18.0f, 16.0f}, BUILDABLE[blockID], 120);
+    hud.end();
+    glEnable(GL_DEPTH_TEST);
+}
+
 void Player::update(GLFWwindow *window, const double &time, const double &dTime) {
     handleKeys(window, time, dTime);
 
-    auto rotX = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.y), glm::fvec3(1, 0, 0));
-    auto rotY = glm::rotate(glm::mat4x4(1), glm::radians((float) cameraAngle.x), glm::fvec3(0, -1, 0));
-    direction = (rotY*rotX)[2];
+    auto rotX = glm::rotate(glm::fmat4x4(1), glm::radians( (float)cameraAngle.y), glm::fvec3(1, 0, 0));
+    auto rotY = glm::rotate(glm::fmat4x4(1), glm::radians( (float)cameraAngle.x), glm::fvec3(0, -1, 0));
+    TBN = rotY * rotX;
+    direction = TBN[2];
 
     if (glm::dot(velocity, velocity) > 0) {
         float dx = velocity.x * static_cast<float>(dTime) * MOVEMENT_SPEED;
@@ -51,9 +75,10 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
 
     hasHeadingBlock = false;
     for (int d = 3; d < 55; d++) {
-        headingBlock = getEyePosition() + direction * (0.1f * d);
-        if (world->getBlock(headingBlock.x, headingBlock.y, headingBlock.z).ID != AIR) {
-            buildBlock = getEyePosition() + direction * (0.1f * (d-1));
+        headingBlock = glm::floor(getEyePosition() + direction * (0.1f * d));
+        const Block &attr = world->getBlockAttributes(headingBlock.x, headingBlock.y, headingBlock.z);
+        if (attr.collision || (!attr.translucent && !attr.transparent)) {
+            buildBlock = glm::floor(getEyePosition() + direction * (0.1f * (d-1)));
             hasHeadingBlock = true;
             break;
         }
@@ -64,20 +89,20 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
         lastAttack = time;
         world->setBlock(headingBlock.x, headingBlock.y, headingBlock.z, AIR, true);
     }
-    else if (!attack || !hasHeadingBlock)
+    else if (!attack)
         lastAttack = 0.0;
 
     bool build = glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT);
     if (hasHeadingBlock && build && (time - lastBuild > 0.2)) {
         lastBuild = time;
-        world->setBlock(buildBlock.x, buildBlock.y, buildBlock.z, STONE, true);
+        world->setBlock(buildBlock.x, buildBlock.y, buildBlock.z, BUILDABLE[blockID], true);
     }
-    else if (!build || !hasHeadingBlock)
+    else if (!build)
         lastBuild = 0.0;
 }
 
-void Player::addAngle(const glm::dvec2 &angle) {
-    cameraAngle += angle * MOUSE_SPEED;
+void Player::addAngle(double ax, double ay) {
+    cameraAngle += glm::dvec2(ax, ay) * MOUSE_SPEED;
     cameraAngle.y = glm::clamp(cameraAngle.y, -89.0, 89.0);
     while (cameraAngle.x > 360.0)
         cameraAngle.x -= 360.0;
@@ -90,21 +115,27 @@ void Player::handleKeys(GLFWwindow *window, const double &time, const double &dT
     velocity.z = 0;
     double angle = glm::radians(cameraAngle.x);
 
+    float speed = 1.0f + RUN_MULTI * static_cast<float>(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT));
+
     if (glfwGetKey(window, GLFW_KEY_W)) {
-        velocity += glm::fvec3(-glm::sin(angle), 0, glm::cos(angle));
+        walking = time;
+        velocity += glm::fvec3(-glm::sin(angle), 0, glm::cos(angle)) * speed;
     }
     if (glfwGetKey(window, GLFW_KEY_A)) {
-        velocity += glm::fvec3(glm::cos(angle), 0, glm::sin(angle));
+        walking = time;
+        velocity += glm::fvec3(glm::cos(angle), 0, glm::sin(angle)) * speed;
     }
     if (glfwGetKey(window, GLFW_KEY_D)) {
-        velocity -= glm::fvec3(glm::cos(angle), 0, glm::sin(angle));
+        walking = time;
+        velocity -= glm::fvec3(glm::cos(angle), 0, glm::sin(angle)) * speed;
     }
     if (glfwGetKey(window, GLFW_KEY_S)) {
-        velocity += glm::fvec3(glm::sin(angle), 0, -glm::cos(angle));
+        walking = time;
+        velocity += glm::fvec3(glm::sin(angle), 0, -glm::cos(angle)) * speed;
     }
     if (canJump && glfwGetKey(window, GLFW_KEY_SPACE)) {
         canJump = false;
-        velocity.y = 6.8f;
+        velocity.y = 6.85f;
     }
     if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL)) {
         velocity.y -= 1;

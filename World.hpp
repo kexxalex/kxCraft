@@ -16,9 +16,6 @@
 
 static constexpr int CHANGE_CHUNK_MAX = 8;
 
-inline int MOD(int n, int m) {
-    return n % m + m * (n < 0);
-}
 
 struct st_DAIC {
     unsigned int count;
@@ -46,7 +43,16 @@ public:
     void setInactive() { m_active = false; }
 
     short setBlock(float x, float y, float z, short ID, bool chunkUpdate=false);
-    [[nodiscard]] const st_block &getBlock(float x, float y, float z) const;
+    [[nodiscard]] inline const st_block &getBlock(float x, float y, float z) const {
+        glm::ivec2 chunkPos, inner;
+        toChunkPositionAndOffset(x, z, chunkPos, inner);
+        return chunks[linearizeChunkPos(chunkPos)].getBlock(inner.x, (int) y, inner.y);
+    }
+    [[nodiscard]] const Block &getBlockAttributes(float x, float y, float z) const {
+        glm::ivec2 chunkPos, inner;
+        toChunkPositionAndOffset(x, z, chunkPos, inner);
+        return chunks[linearizeChunkPos(chunkPos)].getBlockAttributes(inner.x, (int) y, inner.y);
+    }
 
     void reloadCurrentChunk();
     void initializeVertexArray();
@@ -63,24 +69,8 @@ private:
     void updateChunkBuffers();
     int updateIndirect();
 
-    inline void generateChunk(const glm::ivec2 &position, int threadID) {
-        int linIndex = linearizeChunkPos(position);
-
-        if (threadID == -1) {
-            chunks[linIndex].generate(position.x, position.y);
-            return;
-        }
-        if (linIndex % threadCount != threadID)
-            return;
-
-        Chunk &chunk = chunks[linIndex];
-        bool isGenerated = chunk.isGenerated();
-        const glm::ivec2 currentPosition = chunk.getXZPosition();
-        if (!isGenerated || currentPosition != position) {
-            chunk.save();
-            chunk.generate(position.x, position.y);
-        }
-    }
+    void generateChunk(const glm::ivec2 &position, int threadID);
+    void updateChunk(const glm::ivec2 &position, const glm::ivec2 &playerChunkPosition, int threadID);
 
     static inline glm::ivec2 toChunkPosition(float x, float z) {
         return { glm::floor(x / C_EXTEND), glm::floor(z / C_EXTEND) };

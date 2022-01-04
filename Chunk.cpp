@@ -9,6 +9,7 @@
 #include <GL/glew.h>
 #include <fstream>
 #include <filesystem>
+#include <iostream>
 
 struct st_chunk_disk_block {
     unsigned char ID;
@@ -32,18 +33,17 @@ Chunk::~Chunk() {
     if (!m_generated)
         return;
 
-    if (m_hasUnsavedChanges)
-        save();
+    save();
     m_hasVertexUpdate = false;
     vertexCount = 0;
     m_vertices.clear();
 }
 
 void Chunk::save() {
-    if (m_generated) {
+    if (m_generated && m_hasUnsavedChanges) {
         std::ofstream chunkFile("./res/saves/default/" + chunkName);
 
-        st_chunk_disk_block current{ m_blocks[0].ID, 0}; // count is off by one, since no coutn wouldn't be saved
+        st_chunk_disk_block current{ m_blocks[0].ID, 0}; // count is off by one, since zero wouldn't be saved
         for (st_block *block_ptr = &m_blocks[1]; block_ptr - &m_blocks[0] < C_EXTEND*C_EXTEND*C_HEIGHT; block_ptr++) {
             if (block_ptr->ID == current.ID && current.count < 255)
                 current.count++;
@@ -83,8 +83,8 @@ void Chunk::generate(int cx, int cz) {
     }
     else {
         m_worldGenerator->generate(cx, cz, &m_blocks[0]);
-        m_hasUnsavedChanges = true;
     }
+    m_hasUnsavedChanges = false;
     m_generated = true;
     m_needUpdate = true;
 
@@ -149,8 +149,7 @@ int Chunk::getCornerLight(int x, int y, int z) const {
     );
 }
 
-void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB)
-{
+void Chunk::addFace(short ID, const glm::ivec3 &pos, const glm::ivec3 &edgeA, const glm::ivec3 &edgeB){
     glm::ivec3 p00(pos);
     glm::ivec3 p10(pos + edgeA);
     glm::ivec3 p01(pos + edgeB);
@@ -296,10 +295,11 @@ unsigned int Chunk::chunkBufferUpdate(int &availableChanges) {
     if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
         vertexCount = newVertexCount;
         availableChanges--;
+        glm::fvec3 chunkPosition = m_position * static_cast<float>(C_EXTEND);
         glNamedBufferSubData(oboID,
                              offset * sizeof(glm::fvec3),
                              sizeof(glm::fvec3),
-                             &m_position.x);
+                             &chunkPosition);
 
         auto segmentSize = static_cast<unsigned int>(newVertexCount * sizeof(st_vertex));
         glNamedBufferSubData(vboID,
@@ -348,7 +348,6 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
 
     if (BLOCKS[current.ID].translucent && maxSunLight > current.getSunLight() + 1) {
         current.setSunLight(maxSunLight - 1);
-        m_hasUnsavedChanges = true;
 
         bool inBounds = (x > 0 && y > 0 & z > 0 && x+1 < C_EXTEND && z+1 < C_EXTEND && y+1 < C_HEIGHT);
 

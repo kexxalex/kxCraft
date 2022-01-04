@@ -12,8 +12,9 @@ enum TEX_ID {
     T_GRASS_TOP = 1, T_STONE, T_DIRT, T_GRASS_SIDE, T_WOOD_PLANKS,
     T_COBBLESTONE = 17, T_BEDROCK, T_SAND, T_GRAVEL, T_OAK_LOG_SIDE, T_OAK_LOG_TOP,
     T_GOLD_ORE = 33, T_IRON_ORE, T_COAL_ROE,
-    T_TALL_GRASS = 40,
-    T_OAK_LEAVES = 53, T_OAK_LEAVES_OPAQUE
+    T_TALL_GRASS = 40, T_GLASS = 50,
+    T_OAK_LEAVES = 53, T_OAK_LEAVES_OPAQUE,
+    T_SELECTION = 234
 };
 
 enum RENDER_TYPE { R_BLOCK, R_CROSS };
@@ -55,7 +56,7 @@ public:
 };
 
 
-static Block BLOCKS[]{
+static Block BLOCKS[256]{
         {"Air",         T_AIR,       true,   false, false, true},
         {"Grass",       T_GRASS_TOP, T_DIRT, T_GRASS_SIDE, false, true, true},
         {"Stone",       T_STONE},
@@ -65,10 +66,25 @@ static Block BLOCKS[]{
         {"Bedrock",     T_BEDROCK},
         {"Tall Grass",  T_TALL_GRASS, true, false, false, true, R_CROSS},
         {"Oak Log", T_OAK_LOG_TOP, T_OAK_LOG_TOP, T_OAK_LOG_SIDE},
-        {"Oak Leaves", T_OAK_LEAVES, true, true}
+        {"Oak Leaves", T_OAK_LEAVES, true, true},
+        {"Glass", T_GLASS, true, true, false, true},
+
+        {"Selection", T_SELECTION, true}
 
 };
 
 enum BLOCK_ID {
-    AIR, GRASS, STONE, DIRT, WOOD_PLANKS, COBBLESTONE, BEDROCK, TALL_GRASS, OAK_LOG, OAK_LEAVES
+    AIR, GRASS, STONE, DIRT, WOOD_PLANKS, COBBLESTONE, BEDROCK, TALL_GRASS, OAK_LOG, OAK_LEAVES, GLASS,
+    SELECTION
 };
+
+static const unsigned char BUILDABLE[] {
+    GRASS,
+    DIRT,
+    STONE,
+    COBBLESTONE,
+    WOOD_PLANKS,
+    GLASS,
+    BEDROCK,
+    OAK_LOG,
+    OAK_LEAVES};
