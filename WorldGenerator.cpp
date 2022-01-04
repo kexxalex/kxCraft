@@ -97,7 +97,7 @@ void WorldGenerator::placeOakTree(int x, int y, int z, st_block *blocks) const {
             for (int dy = -OAK_TREE_RADIUS; dy <= OAK_TREE_RADIUS; dy++) {
                 if (x+dx >= 0 && y+dy+OAK_TREE_HEIGHT >= 0 && z+dz >= 0
                     && x+dx < C_EXTEND && y+dy+OAK_TREE_HEIGHT < C_HEIGHT && z+dz < C_EXTEND
-                    && abs(dx) + abs(dy) + abs(dz) < 3*OAK_TREE_RADIUS)
+                    && abs(dx) + abs(dy) < 2*OAK_TREE_RADIUS && abs(dy) + abs(dz) < 2*OAK_TREE_RADIUS && abs(dx) + abs(dz) < 2*OAK_TREE_RADIUS)
                 {
                     if (blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID == BLOCK_ID::AIR)
                         blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID = BLOCK_ID::OAK_LEAVES;
@@ -127,7 +127,7 @@ void WorldGenerator::generate(int cx, int cz, st_block *blocks) const {
 
             double ore = oreNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
 
-            if (abs(0.5 - abs(ore)) > 0.498 && abs(mountainNoise.GetValue(z + cz * C_EXTEND, 0.0, z + cz * C_EXTEND)) > 0.75)
+            if (abs(0.5 - abs(ore)) > 0.498 && abs(mountainNoise.GetValue(z + cz * C_EXTEND, 0.0, x + cx * C_EXTEND)) > 0.75)
                 placeOakTree(x, height, z, blocks);
         }
     }

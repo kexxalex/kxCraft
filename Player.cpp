@@ -7,9 +7,9 @@
 #include "Block.hpp"
 #include <iostream>
 
-static constexpr double MOUSE_SPEED = 0.02;
-static constexpr float MOVEMENT_SPEED = 3.5f;
-static constexpr float RUN_MULTI = 0.5f;
+static constexpr double MOUSE_SPEED = 0.05;
+static constexpr float MOVEMENT_SPEED = 2.0f;
+static constexpr float RUN_MULTI = 3.0f;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
         : position(position), bbox(bbox), world(world) {
@@ -30,7 +30,7 @@ void Player::render() {
             float interp = 1/(1 + pow(i-blockID, 4));
             hud.addBlockScreenSpace(TBN, eye,
                                     {-count + i * 2.0f + 1.0f, -19.0f + interp, 24.0f - 8.0f * interp},
-                                    BUILDABLE[i], 30);
+                                    BUILDABLE[i], 50);
         }
     }
     hud.addBlockScreenSpace(TBN, eye, {-count + blockID * 2.0f + 1.0f, -18.0f, 16.0f}, BUILDABLE[blockID], 120);

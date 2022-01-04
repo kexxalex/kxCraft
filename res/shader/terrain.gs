@@ -16,6 +16,7 @@ out vec2 gFace;
 out vec2 gUV;
 out vec3 gFragPosition;
 out vec4 gLight;
+flat out int gTextureID;
 
 const float WAVE_SPEED = 1.0f;
 const float WAVE_STRENGTH = 0.15f;
@@ -32,10 +33,15 @@ void main() {
         pos -= 0.5f;
     }
 
+    gTextureID = vTexture[0];
+
     vec3 wave = vec3(0);
-    if (vTexture[0] == 39) {
+    if (gTextureID == 39) {
         gNormal = vec3(0, 1, 0);
         wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
+    }
+    else if (!HUD && (gTextureID == 52 || gTextureID == 49)) {
+        gNormal = normalize(cross(edgeA, edgeB));
     }
     else {
         gNormal = normalize(cross(edgeA, edgeB));

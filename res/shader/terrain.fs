@@ -12,6 +12,7 @@ in vec2 gFace;
 in vec2 gUV;
 in vec3 gFragPosition;
 in vec4 gLight;
+flat in int gTextureID;
 
 void main() {
     vec4 diffColor = texture(DIFFUSE, gUV);
@@ -27,13 +28,16 @@ void main() {
 
     // Directional sun light
     vec3 lightDir = normalize(vec3(0.5f, -1.0f, 0.25f));
-    float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.6f + 0.5f);
+    float dLight = min(1.2f, max(0.0f, dot(-lightDir, gNormal)) * 0.7f + 0.4f);
+    if (gTextureID == 52) {
+        dLight = max(min(1.2f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.7f + 0.4f), dLight);
+    }
 
     // Ambient Light from occlusion
-    float aLight = min(bilinearLight*1.125 - 0.125, 1.0f) * 0.9f + 0.1;
+    float aLight = min(bilinearLight, 1.0f) * 0.95f + 0.05;
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;
-    float fog = 1.0f - clamp(dot(delta, delta)*4.0 - 3.0, 0.0, 1.0f);
+    float fog = 1.0f - clamp(dot(delta, delta)*2.0 - 1.0, 0.0, 1.0f);
     outFragColor = mix(vec3(0.75, 0.9, 1.0), aLight*dLight * diffColor.rgb, fog);
 } 

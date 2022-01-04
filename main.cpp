@@ -40,11 +40,6 @@ void loadShader() {
     shader.setBool("DISTANCE_CULLING", true);
 }
 
-static void cursor_position_callback(GLFWwindow* window, double xpos, double ypos)
-{
-    PLAYER->addAngle(xpos - WIDTH * 0.5, ypos - HEIGHT * 0.5);
-    glfwSetCursorPos(WINDOW, 0.5 * WIDTH, 0.5 * HEIGHT);
-}
 
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mods) {
     if (key == GLFW_KEY_F2 && action == GLFW_PRESS) {
@@ -85,7 +80,6 @@ bool initGLWindow() {
     glfwSetKeyCallback(WINDOW, key_callback);
     glfwSetWindowSizeCallback(WINDOW, window_size_callback);
     glfwSetScrollCallback(WINDOW, scroll_callback);
-    glfwSetCursorPosCallback(WINDOW, cursor_position_callback);
     glfwMakeContextCurrent(WINDOW);
 
     if (glewInit() != GLEW_OK) {
@@ -214,6 +208,10 @@ int main() {
     while (!glfwWindowShouldClose(WINDOW)) {
         render();
         glfwPollEvents();
+        double xpos, ypos;
+        glfwGetCursorPos(WINDOW, &xpos, &ypos);
+        PLAYER->addAngle(xpos - WIDTH * 0.5, ypos - HEIGHT * 0.5);
+        glfwSetCursorPos(WINDOW, 0.5 * WIDTH, 0.5 * HEIGHT);
     }
 
     std::cout << "Exit game" << std::endl;
