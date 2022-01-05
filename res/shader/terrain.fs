@@ -8,6 +8,7 @@ layout(binding=2) uniform sampler2D SPECULAR;
 uniform float INV_RENDER_DIST;
 uniform float TIME;
 uniform vec3 PLAYER_POSITION;
+uniform bool HUD;
 
 in vec3 gNormal;
 in vec2 gFace;
@@ -30,13 +31,16 @@ void main() {
 
     // Directional sun light
     vec3 lightDir = normalize(vec3(0.25f, -1.0f, 0.25f));
-    float dLight = min(1.0f, max(0.0f, dot(-lightDir, gNormal)) * 0.5f + 0.7f);
-    if (gTextureID == 8 || (gTextureID >= 240 && gTextureID <= 243)) {
-        dLight = max(min(1.0f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.5f + 0.7f), dLight);
+    float dLight = min(1.0f, max(0.0f, dot(-lightDir, gNormal)) * 0.6f + 0.5f);
+    float aLight = 1.0;
+    if (!HUD) {
+        aLight = clamp(bilinearLight, 0.0, 1.0) + 0.1;
+        if (gTextureID == 8 || (gTextureID >= 240 && gTextureID <= 243)) {
+            dLight = max(min(1.0f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.6f + 0.5f), dLight);
+        }
     }
 
     // Ambient Light from occlusion
-    float aLight = pow(min(bilinearLight, 1.0f), 1.0) + 0.1;
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;

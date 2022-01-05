@@ -252,7 +252,6 @@ void Chunk::update() {
         return;
 
     fillSunlight();
-    /*
     std::vector<glm::ivec3> updateBlocks;
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
@@ -266,7 +265,7 @@ void Chunk::update() {
         glm::ivec3 &p = updateBlocks[i];
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
-     */
+
     m_needUpdate = false;
     m_vertices.clear();
 
