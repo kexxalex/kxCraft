@@ -252,7 +252,6 @@ void Chunk::update() {
         return;
 
     fillSunlight();
-    /*
     std::vector<glm::ivec3> updateBlocks;
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
@@ -266,7 +265,7 @@ void Chunk::update() {
         glm::ivec3 &p = updateBlocks[i];
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
-     */
+
     m_needUpdate = false;
     m_vertices.clear();
 
@@ -309,6 +308,7 @@ unsigned int Chunk::chunkBufferUpdate(int &availableChanges) {
     }
 
     if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
+        std::cout << "update chunk\n";
         vertexCount = newVertexCount;
         availableChanges--;
         glm::fvec3 chunkPosition = m_position * static_cast<float>(C_EXTEND);
@@ -342,8 +342,8 @@ void Chunk::fillSunlight() {
 
 void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updateBlocks) {
     // Discard update, if block is not in this chunk
-    if (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT)
-        return;
+    // if (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT)
+//        return;
 
     st_block &current(getBlockRef(x, y, z));
     st_block &t(getBlockRef(x, y + 1, z));
@@ -365,31 +365,31 @@ void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updat
     if (BLOCKS[current.ID].translucent && maxSunLight > current.getSunLight() + 1) {
         current.setSunLight(maxSunLight - 1);
 
-        bool inBounds = (x > 0 && y > 0 & z > 0 && x+1 < C_EXTEND && z+1 < C_EXTEND && y+1 < C_HEIGHT);
-
-        if (inBounds) {
-            if (abs(t.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x, y + 1, z);
-            }
-            if (abs(b.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x, y - 1, z);
-            }
-            if (abs(n.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x, y, z + 1);
-                //north->m_needUpdate = true;
-            }
-            if (abs(e.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x + 1, y, z);
-                //east->m_needUpdate = true;
-            }
-            if (abs(s.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x, y, z - 1);
-                //south->m_needUpdate = true;
-            }
-            if (abs(w.getSunLight() - current.getSunLight()) > 1) {
-                updateBlocks.emplace_back(x - 1, y, z);
-                //west->m_needUpdate = true;
-            }
+        if (abs(t.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x, y + 1, z);
+        }
+        if (abs(b.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x, y - 1, z);
+        }
+        if (abs(n.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x, y, z + 1);
+            if (z + 1 == C_EXTEND)
+                north->m_needUpdate = true;
+        }
+        if (abs(e.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x + 1, y, z);
+            if (x + 1 == C_EXTEND)
+                east->m_needUpdate = true;
+        }
+        if (abs(s.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x, y, z - 1);
+            if (z == -1)
+                south->m_needUpdate = true;
+        }
+        if (abs(w.getSunLight() - current.getSunLight()) > 1) {
+            updateBlocks.emplace_back(x - 1, y, z);
+            if (x == -1)
+                west->m_needUpdate = true;
         }
     }
 }
