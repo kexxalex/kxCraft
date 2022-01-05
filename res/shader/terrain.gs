@@ -61,7 +61,7 @@ void main() {
     gFace = vec2(1, 0);
     EmitVertex();
 
-    if (vTexture[0] == 39)
+    if (gTextureID >= 240 && gTextureID <= 243)
         gl_Position = MVP * vec4(pos + normalize(edgeB + wave), 1.0);
     else
         gl_Position = MVP * vec4(pos + edgeB, 1.0);
@@ -70,7 +70,7 @@ void main() {
     gFace = vec2(0, 1);
     EmitVertex();
 
-    if (vTexture[0] == 39)
+    if (gTextureID >= 240 && gTextureID <= 243)
         gl_Position = MVP * vec4(pos + edgeA + normalize(edgeB + wave), 1.0);
     else
         gl_Position = MVP * vec4(pos + edgeA + edgeB, 1.0);

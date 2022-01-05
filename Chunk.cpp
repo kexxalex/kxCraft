@@ -205,7 +205,7 @@ void Chunk::addCube(int x, int y, int z, short block) {
         addFace((connect && getBlock(x, y-1, z-1).ID == block) ? BLOCKS[block].top : BLOCKS[block].south,
                 glm::ivec3(x + 1, y, z),
                 glm::ivec3(-1, 0, 0),
-                glm::ivec3(0, 1, 0), 3);
+                glm::ivec3(0, 1, 0), 4);
 
 
     // Add east and west face
@@ -213,7 +213,7 @@ void Chunk::addCube(int x, int y, int z, short block) {
         addFace((connect && getBlock(x+1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].east,
                 glm::ivec3(x + 1, y, z + 1),
                 glm::ivec3(0, 0, -1),
-                glm::ivec3(0, 1, 0), 4);
+                glm::ivec3(0, 1, 0), 3);
     if (w.transparent || w.translucent || translucent) {
         addFace((connect && getBlock(x-1, y-1, z).ID == block) ? BLOCKS[block].top : BLOCKS[block].west,
                 glm::ivec3(x, y, z),
@@ -251,8 +251,9 @@ void Chunk::update() {
     if (!m_generated || !m_initialized || !chunkDestructionLock.try_lock())
         return;
 
-    std::vector<glm::ivec3> updateBlocks;
     fillSunlight();
+    /*
+    std::vector<glm::ivec3> updateBlocks;
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
             for (int y = C_HEIGHT - 1; y >= 0; y--) {
@@ -265,6 +266,7 @@ void Chunk::update() {
         glm::ivec3 &p = updateBlocks[i];
         updateBlockLight(p.x, p.y, p.z, updateBlocks);
     }
+     */
     m_needUpdate = false;
     m_vertices.clear();
 
