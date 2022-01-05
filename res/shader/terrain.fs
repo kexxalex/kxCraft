@@ -31,19 +31,20 @@ void main() {
 
     // Directional sun light
     vec3 lightDir = normalize(vec3(0.25f, -1.0f, 0.25f));
-    float dLight = min(1.0f, max(0.0f, dot(-lightDir, gNormal)) * 0.6f + 0.5f);
-    float aLight = 1.0;
-    if (!HUD) {
-        aLight = clamp(bilinearLight, 0.0, 1.0) + 0.1;
-        if (gTextureID == 8 || (gTextureID >= 240 && gTextureID <= 243)) {
-            dLight = max(min(1.0f, max(0.0f, dot(lightDir * vec3(1, -1, 1), gNormal)) * 0.6f + 0.5f), dLight);
-        }
-    }
+    float dLight = 1.0;
 
     // Ambient Light from occlusion
+    float aLight = 1.0;
+    if (HUD) {
+        dLight = min(1.0f, max(0.0f, dot(-lightDir, gNormal)) * 0.6f + 0.5f);
+    }
+    else {
+        dLight = max(dot(-lightDir, gNormal), 0.0) * 0.2f + 0.8f;
+        aLight = bilinearLight + 0.05;
+    }
 
 
     vec3 delta = (PLAYER_POSITION - gFragPosition) * INV_RENDER_DIST;
     float fog = 1.0f - clamp(dot(delta, delta)*2.0 - 1.0, 0.0, 1.0f);
-    outFragColor = mix(vec3(0.75, 0.9, 1.0), aLight*dLight * diffColor.rgb, fog);
+    outFragColor = mix(vec3(0.75, 0.9, 1.0), aLight*dLight * diffColor.rgb, fog); //
 } 
