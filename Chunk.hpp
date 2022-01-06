@@ -16,16 +16,19 @@
 #include "Shader.hpp"
 #include "3Dutils.hpp"
 
-static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 16384/2*3;
+static constexpr unsigned int CHUNK_BASE_VERTEX_OFFSET = 64 * 1024; //16384/2*3;
 
 
 
 class Chunk {
 public:
     Chunk() = default;
+
     ~Chunk();
 
-    void initialize(WorldGenerator *world_generator, unsigned int VBO, unsigned int OBO, unsigned int bufferOffset, Chunk *north, Chunk *east, Chunk *south, Chunk *west);
+    void initialize(WorldGenerator *world_generator, unsigned int VBO, unsigned int OBO, unsigned int bufferOffset,
+                    Chunk *north, Chunk *east, Chunk *south, Chunk *west);
+
     void update();
     void generate(int x, int z);
     void save();

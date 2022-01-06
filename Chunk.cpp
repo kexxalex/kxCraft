@@ -342,8 +342,8 @@ void Chunk::fillSunlight() {
 
 void Chunk::updateBlockLight(int x, int y, int z, std::vector<glm::ivec3> &updateBlocks) {
     // Discard update, if block is not in this chunk
-    // if (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT)
-//        return;
+    if (x < 0 || y < 0 || z < 0 || x >= C_EXTEND || z >= C_EXTEND || y >= C_HEIGHT)
+        return;
 
     st_block &current(getBlockRef(x, y, z));
     st_block &t(getBlockRef(x, y + 1, z));
@@ -400,14 +400,15 @@ short Chunk::setBlock(int x, int y, int z, short block, bool forceUpdate) {
         m_blocks[linearizeCoord(x, y, z)].ID = block;
         m_hasUnsavedChanges = true;
 
-        if (!(block == DIRT || block == GRASS) && getBlock(x, y+1, z).ID == TALL_GRASS) {
-            m_blocks[linearizeCoord(x, y+1, z)].ID = AIR;
+        const Block &top = getBlockAttributes(x, y + 1, z);
+        if (!(block == DIRT || block == GRASS) && top.isPlant) {
+            m_blocks[linearizeCoord(x, y + 1, z)].ID = AIR;
         }
         if (forceUpdate) {
             update();
         }
 
-        if (z == C_EXTEND-1) {
+        if (z == C_EXTEND - 1) {
             if (forceUpdate) {
                 north->update();
             }

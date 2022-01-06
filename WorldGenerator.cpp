@@ -23,7 +23,7 @@ WorldGenerator::WorldGenerator(int seed) {
     caveNoise.SetSeed(seed + 354897);
     caveNoise.SetOctaveCount(5);
     caveNoise.SetNoiseQuality(noise::NoiseQuality::QUALITY_BEST);
-    caveNoise.SetFrequency(1.0 / 64.0);
+    caveNoise.SetFrequency(1.0 / 48.0);
 
     oreNoise.SetSeed(seed - 2367);
     oreNoise.SetOctaveCount(5);
@@ -68,10 +68,24 @@ void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
     stack[0] = BLOCK_ID::BEDROCK;
 
     for (int y = 1; y < C_HEIGHT; y++) {
-        if (y < height && caveNoise.GetValue(x, y * 1.5, z) < 0.8) {
-            stack[y].ID = (y < height - 4) ? BLOCK_ID::STONE : BLOCK_ID::DIRT;
-        }
-        else {
+        if (y < height && abs(caveNoise.GetValue(x, y * 1.5, z)) < 0.9) {
+            if (y >= height - 4)
+                stack[y].ID = BLOCK_ID::DIRT;
+            else {
+                double on = oreNoise.GetValue(x, y, z);
+                if (abs(on - 0.6) < 0.03 * (1 - abs(y - C_HEIGHT / 4.0) * 0.03125)) {
+                    stack[y].ID = BLOCK_ID::COAL_ORE;
+                } else if (abs(on - 0.4) < 0.03 * (1 - abs(y - C_HEIGHT / 5.0) * 0.03125)) {
+                    stack[y].ID = BLOCK_ID::IRON_ORE;
+                } else if (abs(on + 0.4) < 0.02 * (1 - abs(y - C_HEIGHT / 7.0) * 0.03125)) {
+                    stack[y].ID = BLOCK_ID::GOLD_ORE;
+                } else if (abs(on) < 0.007 * (1 - abs(y - 10) * 0.125)) {
+                    stack[y].ID = BLOCK_ID::DIAMOND_ORE;
+                } else {
+                    stack[y].ID = BLOCK_ID::STONE;
+                }
+            }
+        } else {
             stack[y].ID = BLOCK_ID::AIR;
         }
     }

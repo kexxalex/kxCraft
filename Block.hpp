@@ -29,18 +29,22 @@ public:
 
     Block(const char *name, int texture,
           bool transparent = false, bool collision = true, bool connect = false, bool translucent = false,
+          bool isPlant = false,
           RENDER_TYPE type = R_BLOCK)
-            : Block(name, texture, texture, texture, transparent, collision, connect, translucent, type) {}
+            : Block(name, texture, texture, texture, transparent, collision, connect, translucent, isPlant, type) {}
 
     Block(const char *name, int top, int bottom, int side,
           bool transparent = false, bool collision = true, bool connect = false, bool translucent = false,
+          bool isPlant = false,
           RENDER_TYPE type = R_BLOCK)
-            : Block(name, transparent, collision, connect, translucent, top, bottom, side, side, side, side, type) {}
+            : Block(name, transparent, collision, connect, translucent, isPlant, top, bottom, side, side, side, side,
+                    type) {}
 
-    Block(const char *name, bool transparent, bool collision, bool connect, bool translucent,
+    Block(const char *name, bool transparent, bool collision, bool connect, bool translucent, bool isPlant,
           int top, int bottom, int north, int east, int south, int west,
           RENDER_TYPE type = R_BLOCK)
             : name(name), transparent(transparent), connect(connect), collision(collision), translucent(translucent),
+              isPlant(isPlant),
               top(top - 1), bottom(bottom - 1), north(north - 1), east(east - 1), south(south - 1), west(west - 1),
               type(type) {}
 
@@ -49,7 +53,8 @@ public:
     const bool collision{true};
     const bool connect{false};
     const bool translucent{false};
-    const RENDER_TYPE type{ R_BLOCK };
+    const bool isPlant{false};
+    const RENDER_TYPE type{R_BLOCK};
 
     const unsigned char top{0};
     const unsigned char bottom{0};
@@ -61,22 +66,29 @@ public:
 
 
 static Block BLOCKS[256]{
-        {"Air",         T_AIR,         true,          false,        false, true},
-        {"Grass",       T_GRASS_TOP,   T_DIRT,        T_GRASS_SIDE, false, true, true},
-        {"Stone",       T_STONE},
-        {"Dirt",        T_DIRT},
-        {"Wood Planks", T_OAK_PLANKS},
-        {"Cobblestone", T_COBBLESTONE},
-        {"Bedrock",     T_BEDROCK},
-        {"Tall Grass",  T_TALL_GRASS,  true,          false,        false, true, R_CROSS},
-        {"Tulip",       T_TULIP,       true,          false,        false, true, R_CROSS},
-        {"Sunflower",   T_SUNFLOWER,   true,          false,        false, true, R_CROSS},
-        {"Lily",        T_LILY,        true,          false,        false, true, R_CROSS},
-        {"Oak Log",     T_OAK_LOG_TOP, T_OAK_LOG_TOP, T_OAK_LOG_SIDE},
-        {"Oak Leaves",  T_OAK_LEAVES,  true,          true},
-        {"Glass",       T_GLASS,       true,          true,         false, true},
+        {"Air",           T_AIR,         true,          false,        false, true},
+        {"Grass",         T_GRASS_TOP,   T_DIRT,        T_GRASS_SIDE, false, true, true},
+        {"Stone",         T_STONE},
+        {"Dirt",          T_DIRT},
+        {"Wood Planks",   T_OAK_PLANKS},
+        {"Cobblestone",   T_COBBLESTONE},
+        {"Coal Ore",      T_COAL_ORE},
+        {"Iron Ore",      T_IRON_ORE},
+        {"Gold Ore",      T_GOLD_ORE},
+        {"Lapis Lazuli",  T_LAPIS_ORE},
+        {"Red Stone Ore", T_REDSTONE_ORE},
+        {"Diamant Ore",   T_DIAMOND_ORE},
+        {"Emerald Ore",   T_EMERALD_ORE},
+        {"Bedrock",       T_BEDROCK},
+        {"Tall Grass",    T_TALL_GRASS,  true,          false,        false, true, true, R_CROSS},
+        {"Tulip",         T_TULIP,       true,          false,        false, true, true, R_CROSS},
+        {"Sunflower",     T_SUNFLOWER,   true,          false,        false, true, true, R_CROSS},
+        {"Lily",          T_LILY,        true,          false,        false, true, true, R_CROSS},
+        {"Oak Log",       T_OAK_LOG_TOP, T_OAK_LOG_TOP, T_OAK_LOG_SIDE},
+        {"Oak Leaves",    T_OAK_LEAVES,  true,          true},
+        {"Glass",         T_GLASS,       true,          true,         false, true},
 
-        {"Selection",   T_SELECTION,   true}
+        {"Selection",     T_SELECTION,   true}
 
 };
 
@@ -87,6 +99,13 @@ enum BLOCK_ID {
     DIRT,
     WOOD_PLANKS,
     COBBLESTONE,
+    COAL_ORE,
+    IRON_ORE,
+    GOLD_ORE,
+    LAPIS_ORE,
+    REDSTONE_ORE,
+    DIAMOND_ORE,
+    EMERALD_ORE,
     BEDROCK,
     TALL_GRASS,
     TULIP,

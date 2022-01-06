@@ -77,8 +77,8 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
     for (int d = 3; d < 55; d++) {
         headingBlock = glm::floor(getEyePosition() + direction * (0.1f * d));
         const Block &attr = world->getBlockAttributes(headingBlock.x, headingBlock.y, headingBlock.z);
-        if (attr.collision || (!attr.translucent && !attr.transparent)) {
-            buildBlock = glm::floor(getEyePosition() + direction * (0.1f * (d-1)));
+        if (attr.collision || attr.isPlant || (!attr.translucent && !attr.transparent)) {
+            buildBlock = glm::floor(getEyePosition() + direction * (0.1f * (d - 1)));
             hasHeadingBlock = true;
             break;
         }

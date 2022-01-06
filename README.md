@@ -9,13 +9,14 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
   - Switch by holding ALT-key. Default is the loop because most systems GL call overhead is neglectable
 - [x] Highly optimized memory management
   - Compact vertex struct (6Bytes) which increases FPS (up to 10%) and decreases memory usage
-  - Geometry Shader calculates normals, UVs and the fourth vertex for each quad 
-  - Using RenderDistance 48 occupies <2GB and RD 16 just 230MB of video memory for the chunks itself <br> (+ some KB for indirect and offset buffer)
-- [x] Cave and mountain generation
+  - Geometry Shader calculates normals, UVs and the fourth vertex for each quad
+  - Using RenderDistance 48 occupies <2GB and RD 16 just 230MB of video memory for the chunks itself <br> (+ some KB for
+    indirect and offset buffer)
+- [x] Cave and mountain generation with resources (Coal, Iron, Gold and Diamond)
 - [x] Lighting system
 - [x] Collision detection
 - [x] Basic player movement
-- [x] Generate decoration like grass and trees
+- [x] Generate decoration like grass, flowers and trees
 - [x] Build and destroy blocks
 - [x] 3D HUD
 - [ ] PBR Shader
