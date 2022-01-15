@@ -29,7 +29,7 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
 
 
 
-## Compiling for Linux
+## Linux
 
 ### 1. Required libraries for *Linux*
    - libglew-dev
@@ -41,13 +41,6 @@ kxCraft is a C++ based minecraft clone using OpenGL 4.5 with DSA and one (or mor
  1. Open a Terminal inside the **kxCraft** folder 
  2. Compile the source code <br>
 `c++ *.cpp -std=c++17 -o kxCraft -pthread -O3 -lGLEW -lglfw -lGL -lnoise`
-
-## Compiling for Windows x64
-**Assuming you have MS Visual Studio 2022 and clang++.** For other compilers you probably know what to do, by looking at this statement.
-<br>The required headers for this scenario are already included in the **kxCraft\windows** directory.
- 1. Start a Command Line or Powershell in the kxCraft folder.
- 2. Now you can use the following instruction to compile the source code to **kxCraft.exe** (64 bit) <br>
-`clang++ *.cpp -std=c++17  -o kxCraft.exe -O3 -I./windows/include/ -L./windows/lib/ -lglew32 -lglfw3dll -lOpenGL32 -lLibNoise64`
 
 ## Screenshot
 ![kxCraft Hello](https://github.com/kexxalex/kxCraft/blob/master/kxCraft-Hello.png)
