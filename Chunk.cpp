@@ -308,7 +308,7 @@ unsigned int Chunk::chunkBufferUpdate(int &availableChanges) {
     }
 
     if (newVertexCount <= CHUNK_BASE_VERTEX_OFFSET) {
-        std::cout << "update chunk\n";
+        // std::cout << "update chunk\n";
         vertexCount = newVertexCount;
         availableChanges--;
         glm::fvec3 chunkPosition = m_position * static_cast<float>(C_EXTEND);

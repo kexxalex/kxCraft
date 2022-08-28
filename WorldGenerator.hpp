@@ -7,7 +7,7 @@
 
 #pragma once
 
-#include <libnoise/noise.h>
+#include <noise/noise.h>
 #include <glm/glm.hpp>
 #include "Block.hpp"
 

@@ -17,14 +17,6 @@
 static constexpr int CHANGE_CHUNK_MAX = 8;
 
 
-struct st_DAIC {
-    unsigned int count;
-    unsigned int instanceCount;
-    unsigned int first;
-    unsigned int baseInstance;
-};
-
-
 class World {
 public:
     World() = delete;
@@ -38,9 +30,12 @@ public:
         playerDirection = direction;
     }
 
-    void render(bool indirect);
+    void updateChunkBuffers();
+    void render() const;
 
     void setInactive() { m_active = false; }
+
+    [[nodiscard]] inline constexpr bool needBufferUpdate() const { return hasChunkBufferChanges; }
 
     short setBlock(float x, float y, float z, short ID, bool chunkUpdate=false);
     [[nodiscard]] inline const st_block &getBlock(float x, float y, float z) const {
@@ -66,8 +61,6 @@ public:
     }
 
 private:
-    void updateChunkBuffers();
-    int updateIndirect();
 
     void generateChunk(const glm::ivec2 &position, int threadID);
     void updateChunk(const glm::ivec2 &position, const glm::ivec2 &playerChunkPosition, int threadID);
@@ -97,11 +90,8 @@ private:
     unsigned int vaoID{ 0 };
     unsigned int vboID{ 0 };
     unsigned int oboID{ 0 };
-    unsigned int iboID{ 0 };
 
     bool hasChunkBufferChanges{ false };
 
-    GLsync indirectSync;
-    st_DAIC* indirectMapping{ nullptr };
     Chunk* chunks{ nullptr };
 };

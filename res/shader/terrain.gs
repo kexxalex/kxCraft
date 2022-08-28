@@ -7,11 +7,11 @@ in int vLight[];
 
 uniform mat4 MVP;
 uniform float TIME;
-uniform vec3 PLAYER_POSITION;
+uniform vec3 EYE_POSITION;
 uniform bool DISTANCE_CULLING;
 uniform bool HUD;
 
-out vec3 gNormal;
+out mat3 gTBN;
 out vec2 gFace;
 out vec2 gUV;
 out vec3 gFragPosition;
@@ -23,7 +23,7 @@ const float WAVE_STRENGTH = 0.15f;
 
 void main() {
     vec3 pos = gl_in[0].gl_Position.xyz;
-    vec3 delta = (PLAYER_POSITION - pos);
+    vec3 delta = (EYE_POSITION - pos);
     if (DISTANCE_CULLING && vTexture[0] == 39 && dot(delta, delta) > 65536.0f)
         return;
 
@@ -36,14 +36,14 @@ void main() {
     gTextureID = vTexture[0];
 
     vec3 wave = vec3(0);
-    gNormal = normalize(cross(edgeA, edgeB));
+    gTBN = mat3(normalize(edgeA), -normalize(edgeB), normalize(cross(edgeA, edgeB)));
     if (gTextureID >= 240 && gTextureID <= 243) {
-        gNormal = vec3(0, 1, 0);
+        gTBN[2] = vec3(0, 1, 0);
         wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
     }
     else if (HUD || gTextureID != 32) {
         // Cull face of blocks
-        if (dot(gNormal, delta) < 0)
+        if (dot(gTBN[2], delta) < 0)
             return;
     }
 

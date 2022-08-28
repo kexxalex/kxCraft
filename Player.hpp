@@ -38,8 +38,8 @@ public:
 private:
     glm::fvec3 position{0, 0, 0};
     glm::fvec3 direction{0, 0, 1};
-    glm::fvec3 velocity{0, 0, 0};
-    glm::dvec2 cameraAngle{0, 0};
+    glm::fvec3 velocity{ 0, 0, 0};
+    glm::dvec2 cameraAngle{90, 0};
 
     glm::fvec3 bbox{0.8f, 1.8f, 0.8f};
 

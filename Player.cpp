@@ -7,7 +7,7 @@
 #include "Block.hpp"
 #include <iostream>
 
-static constexpr double MOUSE_SPEED = 0.05;
+static constexpr double MOUSE_SPEED = 0.2;
 static constexpr float MOVEMENT_SPEED = 2.0f;
 static constexpr float RUN_MULTI = 3.0f;
 

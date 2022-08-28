@@ -24,13 +24,21 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = true;
-static constexpr int THREAD_COUNT = 2;
-static bool FIRST_UPDATE[THREAD_COUNT] = {false};
+static constexpr bool VSYNC = false;
+static constexpr int THREAD_COUNT = 6;
+static bool FIRST_UPDATE[THREAD_COUNT] = {};
 static World *WORLD = nullptr;
 static Player *PLAYER = nullptr;
 
+template<typename T, typename S, unsigned bits=sizeof(S)>
+inline bool signBit(S x) { return (*reinterpret_cast<T*>(&x) >> (8*bits-1)) ^ 1; }
 
+inline int sign(double x) {
+    return 2*signBit<unsigned long>(x) - 1;
+}
+inline int sign(float x) {
+    return 2*signBit<unsigned int>(x) - 1;
+}
 
 void loadShader() {
     Shader& shader = SHADER_MANAGER.getShader("./res/shader/terrain");
@@ -54,7 +62,7 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
 void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
     if (PLAYER != nullptr) {
-        PLAYER->scrollItems(-yoffset);
+        PLAYER->scrollItems(sign(yoffset));
     }
 }
 
@@ -130,11 +138,13 @@ void render() {
 
     terrainShader.Bind();
     terrainShader.setMatrixFloat4("MVP", MVP);
-    terrainShader.setFloat3("PLAYER_POSITION", playerEyePosition);
+    terrainShader.setFloat3("EYE_POSITION", playerEyePosition);
     terrainShader.setFloat("TIME", (float)time);
     terrainShader.setBool("HUD", false);
 
-    WORLD->render(glfwGetKey(WINDOW, GLFW_KEY_LEFT_ALT));
+    if (WORLD->needBufferUpdate())
+        WORLD->updateChunkBuffers();
+    WORLD->render();
     terrainShader.setBool("HUD", true);
     PLAYER->render();
 
@@ -151,6 +161,7 @@ void render() {
 }
 
 int main() {
+    system("echo $PWD");
     if (!glfwInit()) {
         std::cerr << "Couldn't initialize GLFW" << std::endl;
         return 1;
@@ -201,7 +212,7 @@ int main() {
         glfwPollEvents();
     }
 
-    glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+    glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(WINDOW, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
 
