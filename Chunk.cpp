@@ -84,7 +84,7 @@ void Chunk::generate(int cx, int cz) {
     else {
         m_worldGenerator->generate(cx, cz, &m_blocks[0]);
     }
-    m_hasUnsavedChanges = false;
+    m_hasUnsavedChanges = true;
     m_generated = true;
     m_needUpdate = true;
 

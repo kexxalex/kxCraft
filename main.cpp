@@ -24,8 +24,8 @@ static ShaderManager SHADER_MANAGER;
 static TextureManager TEXTURE_MANAGER;
 static int WIDTH = 1600;
 static int HEIGHT = 900;
-static constexpr bool VSYNC = false;
-static constexpr int THREAD_COUNT = 6;
+static constexpr bool VSYNC = true;
+static constexpr int THREAD_COUNT = 2;
 static bool FIRST_UPDATE[THREAD_COUNT] = {};
 static World *WORLD = nullptr;
 static Player *PLAYER = nullptr;
@@ -179,9 +179,11 @@ int main() {
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/diffuse.bmp");
     static auto NORMAL = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/normal.bmp");
     static auto SPECULAR = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/specular.bmp");
+    static auto OCCLUSION = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/occlusion.bmp");
     DIFFUSE->BindTo(0);
     NORMAL->BindTo(1);
     SPECULAR->BindTo(2);
+    OCCLUSION->BindTo(3);
 
     WORLD = new World({0, 0, 0}, 4562, 16, THREAD_COUNT);
     WORLD->initializeVertexArray();

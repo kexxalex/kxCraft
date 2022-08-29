@@ -16,15 +16,17 @@ out vec2 gFace;
 out vec2 gUV;
 out vec3 gFragPosition;
 out vec4 gLight;
+out vec3 gLightDir;
 flat out int gTextureID;
 
 const float WAVE_SPEED = 1.0f;
 const float WAVE_STRENGTH = 0.15f;
 
 void main() {
+    gLightDir = normalize(vec3(cos(TIME), -0.25, sin(TIME)));
     vec3 pos = gl_in[0].gl_Position.xyz;
-    vec3 delta = (EYE_POSITION - pos);
-    if (DISTANCE_CULLING && vTexture[0] == 39 && dot(delta, delta) > 65536.0f)
+    vec3 delta = EYE_POSITION - pos;
+    if (DISTANCE_CULLING && vTexture[0] >= 240 && dot(delta, delta) > 128.0f * 128.0f)
         return;
 
     vec3 edgeA = gl_in[1].gl_Position.xyz - pos;
