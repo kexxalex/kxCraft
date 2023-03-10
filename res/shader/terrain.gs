@@ -1,9 +1,10 @@
 #version 450 core
-layout (triangles) in;
+layout (points) in;
 layout (triangle_strip, max_vertices = 4) out;
 
-in int vTexture[];
-in int vLight[];
+in uint vMode[];
+in uint vTexture[];
+in uvec4 vLight[];
 
 uniform mat4 MVP;
 uniform float TIME;
@@ -17,70 +18,76 @@ out vec2 gUV;
 out vec3 gFragPosition;
 out vec4 gLight;
 out vec3 gLightDir;
-flat out int gTextureID;
+flat out uint gTextureID;
 
 const float WAVE_SPEED = 1.0f;
 const float WAVE_STRENGTH = 0.15f;
 
-void main() {
-    gLightDir = normalize(vec3(cos(TIME), -0.25, sin(TIME)));
-    vec3 pos = gl_in[0].gl_Position.xyz;
-    vec3 delta = EYE_POSITION - pos;
-    if (DISTANCE_CULLING && vTexture[0] >= 240 && dot(delta, delta) > 128.0f * 128.0f)
+void emit(in const vec2 uv) {
+    const vec3 pos = gl_in[0].gl_Position.xyz;
+    const vec3 view = pos - EYE_POSITION + gTBN[0] * 0.5 + gTBN[1] * 0.5;
+    if (dot(gTBN[2], view) > 0.0)
         return;
 
-    vec3 edgeA = gl_in[1].gl_Position.xyz - pos;
-    vec3 edgeB = gl_in[2].gl_Position.xyz - pos;
-    if (HUD) {
-        pos -= 0.5f;
-    }
-
-    gTextureID = vTexture[0];
-
-    vec3 wave = vec3(0);
-    gTBN = mat3(normalize(edgeA), -normalize(edgeB), normalize(cross(edgeA, edgeB)));
-    if (gTextureID >= 240 && gTextureID <= 243) {
-        gTBN[2] = vec3(0, 1, 0);
-        wave = vec3(sin(TIME * WAVE_SPEED + pos.x - 0.5 * pos.y), 0, sin(TIME * WAVE_SPEED - 0.5* pos.y + pos.z)) * WAVE_STRENGTH;
-    }
-    else if (HUD || gTextureID != 32) {
-        // Cull face of blocks
-        if (dot(gTBN[2], delta) < 0)
-            return;
-    }
-
-    vec2 uv = 0.0625f * vec2(vTexture[0] % 16, 15 - vTexture[0] / 16);
-    gLight = vec4(vLight[0], vLight[1], vLight[2], vTexture[1]) * 0.01666666666f;
-
-    gl_Position = MVP * vec4(pos, 1.0);
     gFragPosition = pos;
+    gl_Position = MVP * vec4(gFragPosition, 1.0);
     gUV = uv;
-    gFace = vec2(0, 0);
+    gFace = vec2(0.0, 0.0);
     EmitVertex();
 
-    gl_Position = MVP * vec4(pos + edgeA, 1.0);
-    gFragPosition = pos + edgeA;
-    gUV = uv + vec2(0.0625f, 0.0f);
-    gFace = vec2(1, 0);
+    gFragPosition = pos + gTBN[0];
+    gl_Position = MVP * vec4(gFragPosition, 1.0);
+    gUV = uv + vec2(0.0625, 0.0);
+    gFace = vec2(1.0, 0.0);
+    EmitVertex();
+    
+    gFragPosition = pos + gTBN[1];
+    gl_Position = MVP * vec4(gFragPosition, 1.0);
+    gUV = uv + vec2(0.0, 0.0625);
+    gFace = vec2(0.0, 1.0);
     EmitVertex();
 
-    if (gTextureID >= 240 && gTextureID <= 243)
-        gl_Position = MVP * vec4(pos + normalize(edgeB + wave), 1.0);
-    else
-        gl_Position = MVP * vec4(pos + edgeB, 1.0);
-    gFragPosition = pos + edgeB;
-    gUV = uv + vec2(0.0f, 0.0625f);
-    gFace = vec2(0, 1);
-    EmitVertex();
-
-    if (gTextureID >= 240 && gTextureID <= 243)
-        gl_Position = MVP * vec4(pos + edgeA + normalize(edgeB + wave), 1.0);
-    else
-        gl_Position = MVP * vec4(pos + edgeA + edgeB, 1.0);
-    gFragPosition = pos + edgeA + edgeB;
-    gUV = uv + vec2(0.0625f, 0.0625f);
-    gFace = vec2(1, 1);
+    gFragPosition = pos + gTBN[0] + gTBN[1];
+    gl_Position = MVP * vec4(gFragPosition, 1.0);
+    gUV = uv + vec2(0.0625, 0.0625);
+    gFace = vec2(1.0, 1.0);
     EmitVertex();
 
     EndPrimitive();
+}
+
+void main() {
+    gLightDir = normalize(vec3(1.0, -1.0, 0.5));
+
+    gTextureID = vTexture[0];
+
+    vec2 uv = 0.0625 * ivec2(vTexture[0] % 16, 15 - vTexture[0] / 16);
+    gLight = vec4(vLight[0]) * (1.0 / 60.0);
+
+    switch (vMode[0]) {
+        case 0:
+            gTBN = mat3(vec3(0, 0, 1), vec3(1, 0, 0), vec3(0, 1, 0));
+            emit(uv);
+            break;
+        case 1:
+            gTBN = mat3(vec3(1, 0, 0), vec3(0, 0, 1), vec3(0, -1, 0));
+            emit(uv);
+            break;
+        case 2:
+            gTBN = mat3(vec3(1, 0, 0), vec3(0, 1, 0), vec3(0, 0, 1));
+            emit(uv);
+            break;
+        case 3:
+            gTBN = mat3(vec3(0, 0, -1), vec3(0, 1, 0), vec3(1, 0, 0));
+            emit(uv);
+            break;
+        case 4:
+            gTBN = mat3(vec3(-1, 0, 0), vec3(0, 1, 0), vec3(0, 0, -1));
+            emit(uv);
+            break;
+        case 5:
+            gTBN = mat3(vec3(0, 0, 1), vec3(0, 1, 0), vec3(-1, 0, 0));
+            emit(uv);
+            break;
+    }
 }

@@ -18,31 +18,43 @@ in vec2 gUV;
 in vec3 gFragPosition;
 in vec4 gLight;
 in vec3 gLightDir;
-flat in int gTextureID;
+flat in uint gTextureID;
+
+vec3 ACESFilm(in vec3 x) {
+    float a = 2.51;
+    float b = 0.03;
+    float c = 2.43;
+    float d = 0.59;
+    float e = 0.14;
+    return clamp((x*(a*x+b))/(x*(c*x+d)+e), 0.0, 1.0);
+}
+
+vec3 Reinhard(in vec3 x) {
+    return x / (x + 1.0);
+}
 
 void main() {
     vec4 diffColor = texture(DIFFUSE, gUV);
-    if (diffColor.a < 0.5f)
+    if (diffColor.a < 0.5)
         discard;
 
     vec3 uv_normal = normalize(texture(NORMAL, gUV).rgb * 2.0 - 1.0);
     float spec = texture(SPECULAR, gUV).r;
-    float occl = texture(OCCLUSION, gUV).r;
+    //float occl = texture(OCCLUSION, gUV).r;
 
     vec3 normal = gTBN * uv_normal;
 
     // Directional sun light
-    float totalLuma = 0.6;
+    float totalLuma = 0.4;
     float dLight = 1.0;
     float sLight = 0.0;
 
-    // Ambient Light from occlusion
+    // Ambient Light with occlusion
     float aLight = 1.0;
     if (HUD) {
-        dLight = max(-dot(gLightDir, gTBN[2].xyz), 0.0) * 0.5 + 0.7;
+        dLight = max(-dot(gLightDir, normal), 0.0) * 1.5 + 0.5;
     }
     else {
-        totalLuma = 1.2; // clamp(0.5 - cos(TIME*0.0), 0.05, 1.5);
         float bilinearLight = (gFace.x * gFace.y * gLight.a +
             (1.0f - gFace.x) * (1.0f - gFace.y) * gLight.r +
             gFace.x * (1.0f - gFace.y) * gLight.g +
@@ -52,10 +64,9 @@ void main() {
         vec3 view = normalize(gFragPosition - EYE_POSITION);
 
         // Directional Light
-        dLight = max(-dot(gLightDir, normal), 0.0);
+        dLight = clamp(max(-dot(gLightDir, normal), 0.0) * 0.75 + 0.25, 0.0, 1.0);
+        sLight = pow(clamp(dot(reflect(view, normal), gLightDir), 0.0, 1.0), 5.0) * spec * 4.0;
 
-        // Specular Highlights
-        sLight = max(-dot(reflect(view, normal), gLightDir) * spec, 0.0);
         aLight = bilinearLight;
     }
 
@@ -63,8 +74,10 @@ void main() {
     vec3 delta = (EYE_POSITION - gFragPosition) * INV_RENDER_DIST;
     float fog = 1.0f - clamp(dot(delta, delta)*2.0 - 1.0, 0.0, 1.0f);
 
-    float totalLight = totalLuma * mix(occl*aLight * (1.0+sLight), aLight*dLight+occl*aLight*sLight, dLight);
-    // float totalLight = totalLuma * (dLight + aLight) * (1.0+sLight);
+    //float totalLight = totalLuma * mix(occl*aLight, aLight*dLight+occl*aLight*sLight, dLight);
+    float totalLight = mix(0.01, totalLuma * aLight, dLight) + sLight * aLight * dLight;
 
-    outFragColor = mix(vec3(0.75, 0.9, 1.0), totalLight * diffColor.rgb, fog);
+    vec3 mapped = ACESFilm(totalLight * diffColor.rgb);
+    //
+    outFragColor = mix(vec3(0.75, 0.9, 1.0), pow(mapped, vec3(0.4545454545)), fog);
 } 

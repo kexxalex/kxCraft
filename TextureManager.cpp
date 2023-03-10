@@ -3,6 +3,9 @@
 #include <iostream>
 
 
+TextureManager TEXTURE_MANAGER = TextureManager::create();
+
+
 TextureManager::~TextureManager() {
     clear();
 }

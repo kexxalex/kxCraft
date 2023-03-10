@@ -55,7 +55,7 @@ WorldGenerator &WorldGenerator::operator=(const WorldGenerator &wg) {
     return *this;
 }
 
-void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
+void WorldGenerator::placeStack(int x, int z, st_block stack[C_HEIGHT]) const {
     double mNoise = mountainNoise.GetValue(x, z, 0.0);
     double mountains = terrace(
             glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
@@ -68,7 +68,7 @@ void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
     stack[0] = BLOCK_ID::BEDROCK;
 
     for (int y = 1; y < C_HEIGHT; y++) {
-        if (y < height && abs(caveNoise.GetValue(x, y * 1.5, z)) < 0.9) {
+        if (y < height && abs(caveNoise.GetValue(x, y * 1.5, z)) < 0.8) {
             if (y >= height - 4)
                 stack[y].ID = BLOCK_ID::DIRT;
             else {
@@ -106,31 +106,32 @@ void WorldGenerator::placeStack(int x, int z, st_block *stack) const {
     }
 }
 
-void WorldGenerator::placeOakTree(int x, int y, int z, st_block *blocks) const {
+void WorldGenerator::placeOakTree(int x, int y, int z, st_block blocks[C_EXTEND][C_EXTEND][C_HEIGHT]) const {
     if (x >= 0 && y >= 0 && z >= 0 && x < C_EXTEND && z < C_EXTEND) {
         for (int dy = 0; dy < OAK_TREE_HEIGHT && y + dy < C_HEIGHT; dy++)
-            blocks[linearizeCoord(x, y + dy, z)].ID = BLOCK_ID::OAK_LOG;
+            blocks[x][z][y+dy].ID = BLOCK_ID::OAK_LOG;
     }
 
     for (int dx = -OAK_TREE_RADIUS; dx <= OAK_TREE_RADIUS; dx++) {
         for (int dz = -OAK_TREE_RADIUS; dz <= OAK_TREE_RADIUS; dz++) {
             for (int dy = -OAK_TREE_RADIUS; dy <= OAK_TREE_RADIUS; dy++) {
-                if (x+dx >= 0 && y+dy+OAK_TREE_HEIGHT >= 0 && z+dz >= 0
-                    && x+dx < C_EXTEND && y+dy+OAK_TREE_HEIGHT < C_HEIGHT && z+dz < C_EXTEND
+                int px = x+dx, py = y+dy+OAK_TREE_HEIGHT, pz = z+dz;
+                if (px >= 0 && py >= 0 && pz >= 0
+                    && px < C_EXTEND && py < C_HEIGHT && pz < C_EXTEND
                     && abs(dx) + abs(dy) < 2*OAK_TREE_RADIUS && abs(dy) + abs(dz) < 2*OAK_TREE_RADIUS && abs(dx) + abs(dz) < 2*OAK_TREE_RADIUS)
                 {
-                    if (blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID == BLOCK_ID::AIR)
-                        blocks[linearizeCoord(x+dx, y+OAK_TREE_HEIGHT+dy, z+dz)].ID = BLOCK_ID::OAK_LEAVES;
+                    if (blocks[px][pz][py].ID == BLOCK_ID::AIR)
+                        blocks[px][pz][py].ID = BLOCK_ID::OAK_LEAVES;
                 }
             }
         }
     }
 }
 
-void WorldGenerator::generate(int cx, int cz, st_block *blocks) const {
+void WorldGenerator::generate(int cx, int cz, st_block blocks[C_EXTEND][C_EXTEND][C_HEIGHT]) const {
     for (int z = 0; z < C_EXTEND; z++) {
         for (int x = 0; x < C_EXTEND; x++) {
-            placeStack(x + cx * C_EXTEND, z + cz * C_EXTEND, &blocks[linearizeCoord(x, 0, z)]);
+            placeStack(x + cx * C_EXTEND, z + cz * C_EXTEND, blocks[x][z]);
         }
     }
 
@@ -138,7 +139,7 @@ void WorldGenerator::generate(int cx, int cz, st_block *blocks) const {
         for (int x = -OAK_TREE_RADIUS; x <= C_EXTEND+OAK_TREE_RADIUS; x++) {
             double mNoise = mountainNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0);
             double mountains = terrace(
-                    glm::clamp(mNoise * 1 + 0.6, 0.0, 1.0),
+                    glm::clamp(mNoise * 1.0 + 0.6, 0.0, 1.0),
                     6);
             int height = static_cast<int>(C_HEIGHT / 3.0 * (1.0 + mountains)
                                           + 3 * meadowNoise.GetValue(x + cx * C_EXTEND, z + cz * C_EXTEND, 0.0)

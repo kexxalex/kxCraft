@@ -20,23 +20,23 @@
 
 
 static GLFWwindow *WINDOW = nullptr;
-static ShaderManager SHADER_MANAGER;
-static TextureManager TEXTURE_MANAGER;
-static int WIDTH = 1600;
-static int HEIGHT = 900;
-static constexpr bool VSYNC = true;
-static constexpr int THREAD_COUNT = 2;
+extern ShaderManager SHADER_MANAGER;
+extern TextureManager TEXTURE_MANAGER;
+static int WIDTH = 1920;
+static int HEIGHT = 1080;
+static constexpr bool VSYNC = false;
+static constexpr int THREAD_COUNT = 6;
 static bool FIRST_UPDATE[THREAD_COUNT] = {};
 static World *WORLD = nullptr;
 static Player *PLAYER = nullptr;
 
 template<typename T, typename S, unsigned bits=sizeof(S)>
-inline bool signBit(S x) { return (*reinterpret_cast<T*>(&x) >> (8*bits-1)) ^ 1; }
+constexpr bool signBit(S x) { return (*reinterpret_cast<T*>(&x) >> (8*bits-1)) ^ 1; }
 
-inline int sign(double x) {
+constexpr int sign(double x) {
     return 2*signBit<unsigned long>(x) - 1;
 }
-inline int sign(float x) {
+constexpr int sign(float x) {
     return 2*signBit<unsigned int>(x) - 1;
 }
 
@@ -76,18 +76,28 @@ void window_size_callback(GLFWwindow* window, int width, int height)
 bool initGLWindow() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 5);
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE,        GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_RESIZABLE,             GLFW_FALSE);
+
+    /*
+    glfwWindowHint(GLFW_RED_BITS,             10);
+    glfwWindowHint(GLFW_GREEN_BITS,           10);
+    glfwWindowHint(GLFW_BLUE_BITS,            10);
+    glfwWindowHint(GLFW_ALPHA_BITS,            2);
+    */
 
     WINDOW = glfwCreateWindow(WIDTH, HEIGHT, "kxCraft", nullptr, nullptr);
+
     if (!WINDOW) {
         std::cerr << "Couldn't create GLFW window" << std::endl;
         glfwTerminate();
         return false;
     }
 
-    glfwSetKeyCallback(WINDOW, key_callback);
-    glfwSetWindowSizeCallback(WINDOW, window_size_callback);
-    glfwSetScrollCallback(WINDOW, scroll_callback);
+    glfwSetKeyCallback(        WINDOW, key_callback         );
+    glfwSetWindowSizeCallback( WINDOW, window_size_callback );
+    glfwSetScrollCallback(     WINDOW, scroll_callback      );
+
     glfwMakeContextCurrent(WINDOW);
 
     if (glewInit() != GLEW_OK) {
@@ -118,7 +128,7 @@ void render() {
     static int frames{0};
     static glm::fvec3 up(0, 1, 0);
     static glm::fmat4x4 proj = glm::perspective(
-            glm::radians(65.0f),
+            glm::radians(FOV),
             (float)WIDTH / (float)HEIGHT,
             0.03f, 1024.0f);
 
@@ -144,9 +154,16 @@ void render() {
 
     if (WORLD->needBufferUpdate())
         WORLD->updateChunkBuffers();
+    
+    if (glfwGetKey(WINDOW, GLFW_KEY_F3) == GLFW_PRESS) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    }
+    else if (glfwGetKey(WINDOW, GLFW_KEY_F3) == GLFW_RELEASE) {
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    }
     WORLD->render();
-    terrainShader.setBool("HUD", true);
-    PLAYER->render();
+    // terrainShader.setBool("HUD", true);
+    // PLAYER->render();
 
     glfwSwapBuffers(WINDOW);
     frames++;
@@ -161,7 +178,7 @@ void render() {
 }
 
 int main() {
-    system("echo $PWD");
+    // system("echo $PWD");
     if (!glfwInit()) {
         std::cerr << "Couldn't initialize GLFW" << std::endl;
         return 1;
@@ -179,13 +196,13 @@ int main() {
     static auto DIFFUSE = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/diffuse.bmp");
     static auto NORMAL = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/normal.bmp");
     static auto SPECULAR = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/specular.bmp");
-    static auto OCCLUSION = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/occlusion.bmp");
+    //static auto OCCLUSION = TEXTURE_MANAGER.loadTexture("./res/resourcepacks/default/occlusion.bmp");
     DIFFUSE->BindTo(0);
     NORMAL->BindTo(1);
     SPECULAR->BindTo(2);
-    OCCLUSION->BindTo(3);
+    //OCCLUSION->BindTo(3);
 
-    WORLD = new World({0, 0, 0}, 4562, 16, THREAD_COUNT);
+    WORLD = new World({0, 0, 0}, 267, 12, THREAD_COUNT);
     WORLD->initializeVertexArray();
 
     float y = C_HEIGHT-1.0f;
@@ -217,6 +234,7 @@ int main() {
     glfwSetInputMode(WINDOW, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
     if (glfwRawMouseMotionSupported())
         glfwSetInputMode(WINDOW, GLFW_RAW_MOUSE_MOTION, GLFW_TRUE);
+    glfwSetCursorPos(WINDOW, 0.5 * WIDTH, 0.5 * HEIGHT);
 
     glClearColor(0.75, 0.9, 1.0, 1.0);
     glClearDepth(1.0);

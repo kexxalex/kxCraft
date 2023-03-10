@@ -1,6 +1,7 @@
 #include "ShaderManager.hpp"
 #include <iostream>
 
+ShaderManager SHADER_MANAGER = ShaderManager::create();
 
 Shader& ShaderManager::getShader(std::string_view name) noexcept {
     if (shaderNameIndex.find(name) == shaderNameIndex.end()) {

@@ -8,7 +8,12 @@
 
 class TextureManager {
 public:
-    TextureManager() = default;
+    static TextureManager &create() {
+        static TextureManager manager;
+        return manager;
+    }
+
+    TextureManager(const TextureManager &) = default;
 
     ~TextureManager();
 
@@ -23,6 +28,8 @@ public:
     std::shared_ptr<Texture> loadTexture(const char *name, bool interpolation = false, bool mipmaps = false, int anisotropy=16);
 
 private:
+    TextureManager() = default;
+
     std::shared_ptr<Texture> m_default{nullptr};
     std::unordered_map<unsigned int, std::shared_ptr<Texture>> m_texture_id;
     std::unordered_map<std::shared_ptr<Texture>, unsigned int> m_id_texture;

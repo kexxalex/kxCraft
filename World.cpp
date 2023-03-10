@@ -7,9 +7,9 @@
 
 #include "World.hpp"
 #include <iostream>
+#include <iomanip>
 
-
-static const float CLIP_ANGLE = glm::cos(glm::radians(65.0f));
+static const float CLIP_ANGLE = glm::cos(glm::radians(FOV));
 constexpr glm::ivec2 tJunctionOffset[4] = {
         {1,1},
         {1,-1},
@@ -122,7 +122,7 @@ void World::render() const {
         float angle = glm::dot(sideA, sideB);
 
         if (count > 0 && angle > CLIP_ANGLE) {
-            glDrawArraysInstancedBaseInstance(GL_TRIANGLES, CHUNK_BASE_VERTEX_OFFSET * i, count, 1, i);
+            glDrawArraysInstancedBaseInstance(GL_POINTS, CHUNK_BASE_VERTEX_OFFSET * i, count, 1, i);
         }
     }
 }
@@ -133,7 +133,7 @@ void World::reloadCurrentChunk() {
     int av = 1;
     Chunk &chunk =  chunks[linearizeChunkPos(playerChunkPosition)];
     chunk.update();
-    chunk.chunkBufferUpdate(av);
+    // chunk.chunkBufferUpdate(av);
 }
 
 void World::initializeVertexArray() {
@@ -144,27 +144,35 @@ void World::initializeVertexArray() {
     glCreateBuffers(1, &vboID);
     glCreateBuffers(1, &oboID);
 
-    std::cout << "Vertex   Buffer: " << vboID << std::endl;
-    std::cout << "Offset   Buffer: " << oboID << std::endl;
+    std::cout << "Vertex Buffer: " << vboID << std::endl;
+    std::cout << "Offset Buffer: " << oboID << std::endl;
+    int size;
+    glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &size);
+    std::cout << "Max Buffer Size: " << size << std::endl;
 
-    glNamedBufferStorage(vboID, static_cast<GLsizei>(maxWorldExtend * maxWorldExtend * CHUNK_BASE_VERTEX_OFFSET * sizeof(st_vertex)),
+
+    chunkBufferSize = std::max((uint64_t)size, maxWorldExtend * maxWorldExtend * CHUNK_BASE_VERTEX_OFFSET * sizeof(st_face));
+    glNamedBufferStorage(vboID, chunkBufferSize, nullptr, GL_DYNAMIC_STORAGE_BIT);
+    glNamedBufferStorage(oboID, static_cast<GLsizeiptr>(sizeof(glm::fvec3) * maxWorldExtend * maxWorldExtend),
                       nullptr, GL_DYNAMIC_STORAGE_BIT);
-    glNamedBufferStorage(oboID, static_cast<GLsizei>(maxWorldExtend * maxWorldExtend * sizeof(glm::fvec3)),
-                      nullptr, GL_DYNAMIC_STORAGE_BIT);
 
-    glVertexArrayVertexBuffer(vaoID, 0, vboID, 0, sizeof(st_vertex));
-    glVertexArrayAttribFormat(vaoID, 0, 4, GL_UNSIGNED_BYTE, GL_FALSE, 0);
+    glVertexArrayVertexBuffer(vaoID, 0, vboID, offsetof(st_face, position), sizeof(st_face));
+    glVertexArrayAttribIFormat(vaoID, 0, 4, GL_UNSIGNED_BYTE, 0);
 
-    glVertexArrayVertexBuffer(vaoID, 1, vboID, 4, sizeof(st_vertex));
-    glVertexArrayAttribFormat(vaoID, 1, 1, GL_SHORT, GL_FALSE, 0);
+    glVertexArrayVertexBuffer(vaoID, 1, vboID, offsetof(st_face, light), sizeof(st_face));
+    glVertexArrayAttribIFormat(vaoID, 1, 4, GL_UNSIGNED_BYTE, 0);
 
-    glVertexArrayVertexBuffer(vaoID, 2, oboID, 0, sizeof(glm::fvec3));
-    glVertexArrayAttribFormat(vaoID, 2, 3, GL_FLOAT, GL_FALSE, 0);
-    glVertexArrayBindingDivisor(vaoID, 2, 1);
+    glVertexArrayVertexBuffer(vaoID, 2, vboID, offsetof(st_face, ID), sizeof(st_face));
+    glVertexArrayAttribIFormat(vaoID, 2, 1, GL_UNSIGNED_SHORT, 0);
+
+    glVertexArrayVertexBuffer(vaoID, 3, oboID, 0, sizeof(glm::fvec3));
+    glVertexArrayAttribFormat(vaoID, 3, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayBindingDivisor(vaoID, 3, 1);
 
     glEnableVertexArrayAttrib(vaoID, 0);
     glEnableVertexArrayAttrib(vaoID, 1);
     glEnableVertexArrayAttrib(vaoID, 2);
+    glEnableVertexArrayAttrib(vaoID, 3);
 
     hasChunkBufferChanges = false;
 }
@@ -194,5 +202,8 @@ void World::updateChunkBuffers() {
 
     for (int i = 0; i < maxWorldExtend * maxWorldExtend; i++) {
         chunks[i].chunkBufferUpdate(availableChanges);
+        if (availableChanges <= 0)
+            return;
     }
+//    std::cout << "[  INFO  ][ World ] Buffer usage: " << std::setprecision(4) << offset * sizeof(st_vertex) / (1024.0 * 1024.0) << "MB\n";
 }

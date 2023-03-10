@@ -14,8 +14,8 @@
 
 static constexpr int C_EXTEND = 16;
 static constexpr int C_HEIGHT = 256;
-static constexpr unsigned char MAX_LIGHT = 15;
-static constexpr unsigned char LIGHT_MASK = 0b00001111; // 15
+static constexpr int MAX_LIGHT = 15;
+static constexpr uint8_t LIGHT_MASK = 0b00001111; // 15
 
 static constexpr int OAK_TREE_HEIGHT = 5;
 static constexpr int OAK_TREE_RADIUS = 2;
@@ -29,30 +29,28 @@ inline double terrace(double val, int steps)
 }
 
 struct st_block {
-    unsigned char ID{ 0 };
+    uint8_t ID{ 0 };
 
-    st_block(unsigned char ID=BLOCK_ID::AIR, unsigned char sunLight = 0, unsigned char torchLight = 0)
-        : ID(ID), light(0)
+    constexpr st_block(uint8_t ID=BLOCK_ID::AIR, uint8_t sunLight = 0, uint8_t torchLight = 0)
+        : ID(ID), light(((torchLight & LIGHT_MASK) << 4) | (sunLight & LIGHT_MASK))
     {
-        light = ((torchLight & LIGHT_MASK) << 4) | (sunLight & LIGHT_MASK);
     }
 
-    [[nodiscard]] inline unsigned char getTorchLight() const { return (light >> 4) & LIGHT_MASK; }
-    [[nodiscard]] inline unsigned char getSunLight() const { return light & LIGHT_MASK; }
-    [[nodiscard]] inline short getLight() const {
+    [[nodiscard]] constexpr uint8_t getTorchLight() const { return (light >> 4) & LIGHT_MASK; }
+    [[nodiscard]] constexpr uint8_t getSunLight() const { return light & LIGHT_MASK; }
+    [[nodiscard]] constexpr short getLight() const {
         return (getSunLight() > getTorchLight()) ? getSunLight() : getTorchLight();
     }
 
-    inline void setTorchLight(unsigned char torchLight) {
+    inline void setTorchLight(uint8_t torchLight) {
         light = ((torchLight & LIGHT_MASK) << 4) | (light & LIGHT_MASK);
     }
-    inline void setSunLight(unsigned char sunLight) {
+    inline void setSunLight(uint8_t sunLight) {
         light = light & (LIGHT_MASK << 4) | (sunLight & LIGHT_MASK);
     }
 
 private:
-    unsigned char light{ 0 }; // 0bTTTTSSSS -- (LittleEndian) first 4 bit for sunlight, next 4 bit for torch light
-
+    uint8_t light{ 0 }; // 0bTTTTSSSS -- (LittleEndian) first 4 bit for sunlight, next 4 bit for torch light
 };
 
 static st_block AIR_BLOCK(0);
@@ -69,9 +67,9 @@ public:
 
     WorldGenerator& operator=(const WorldGenerator& wg);
 
-    void placeStack(int x, int z, st_block *stack) const;
-    void placeOakTree(int x, int y, int z, st_block *blocks) const;
-    void generate(int cx, int cz, st_block *blocks) const;
+    void placeStack(int x, int z, st_block stack[C_HEIGHT]) const;
+    void placeOakTree(int x, int y, int z, st_block blocks[C_EXTEND][C_EXTEND][C_HEIGHT]) const;
+    void generate(int cx, int cz, st_block blocks[C_EXTEND][C_EXTEND][C_HEIGHT]) const;
 
 private:
     noise::module::Billow mountainNoise;

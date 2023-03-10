@@ -14,7 +14,8 @@
 #include <fstream>
 
 
-static constexpr int CHANGE_CHUNK_MAX = 8;
+static constexpr float FOV = 65.0f;
+static constexpr int CHANGE_CHUNK_MAX = 4096;
 
 
 class World {
@@ -35,7 +36,7 @@ public:
 
     void setInactive() { m_active = false; }
 
-    [[nodiscard]] inline constexpr bool needBufferUpdate() const { return hasChunkBufferChanges; }
+    [[nodiscard]] constexpr bool needBufferUpdate() const { return hasChunkBufferChanges; }
 
     short setBlock(float x, float y, float z, short ID, bool chunkUpdate=false);
     [[nodiscard]] inline const st_block &getBlock(float x, float y, float z) const {
@@ -90,6 +91,8 @@ private:
     unsigned int vaoID{ 0 };
     unsigned int vboID{ 0 };
     unsigned int oboID{ 0 };
+    GLsizeiptr chunkBufferSize{ 0 };
+    unsigned int totalVertices{ 0 };
 
     bool hasChunkBufferChanges{ false };
 

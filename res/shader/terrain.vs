@@ -1,15 +1,18 @@
 #version 450 core
 
-layout(location=0) in vec4 aPositionWithID;
-layout(location=1) in float aLight;
-layout(location=2) in vec3 aChunkPosition;
+layout(location=0) in uvec4 aPositionMode;
+layout(location=1) in uvec4 aLight;
+layout(location=2) in uint aID;
+layout(location=3) in vec3 aChunkPosition;
 
-out int vTexture;
-out int vLight;
+out uint vMode;
+out uint vTexture;
+out uvec4 vLight;
 
 void main() {
-    vTexture = int(aPositionWithID.w);
-    vLight = int(aLight);
+    vMode = aPositionMode.a;
+    vTexture = aID;
+    vLight = aLight;
 
-    gl_Position = vec4(aChunkPosition + aPositionWithID.xyz, 1.0);
+    gl_Position = vec4(aChunkPosition + aPositionMode.xyz, 1.0);
 }

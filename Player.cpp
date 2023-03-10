@@ -12,7 +12,8 @@ static constexpr float MOVEMENT_SPEED = 2.0f;
 static constexpr float RUN_MULTI = 3.0f;
 
 Player::Player(World *world, const glm::fvec3 &position, const glm::fvec3 &bbox)
-        : position(position), bbox(bbox), world(world) {
+    : position(position), bbox(bbox), world(world)
+{
 
 }
 
@@ -38,7 +39,7 @@ void Player::render() {
     glEnable(GL_DEPTH_TEST);
 }
 
-void Player::update(GLFWwindow *window, const double &time, const double &dTime) {
+void Player::update(GLFWwindow *window, const double time, const double dTime) {
     handleKeys(window, time, dTime);
 
     auto rotX = glm::rotate(glm::fmat4x4(1), glm::radians( (float)cameraAngle.y), glm::fvec3(1, 0, 0));
@@ -46,10 +47,12 @@ void Player::update(GLFWwindow *window, const double &time, const double &dTime)
     TBN = rotY * rotX;
     direction = TBN[2];
 
+    float dt = static_cast<float>(dTime);
+
     if (glm::dot(velocity, velocity) > 0) {
-        float dx = velocity.x * static_cast<float>(dTime) * MOVEMENT_SPEED;
-        float dy = velocity.y * static_cast<float>(dTime);
-        float dz = velocity.z * static_cast<float>(dTime) * MOVEMENT_SPEED;
+        float dx = velocity.x * dt * MOVEMENT_SPEED;
+        float dy = velocity.y * dt;
+        float dz = velocity.z * dt * MOVEMENT_SPEED;
 
         if (!collide(position.x + dx, position.y, position.z))
             position.x += dx;

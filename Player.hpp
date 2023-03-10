@@ -22,14 +22,14 @@ public:
         blockID = MOD(blockID,  sizeof(BUILDABLE));
     }
 
-    void update(GLFWwindow *window, const double &time, const double &dTime);
+    void update(GLFWwindow *window, const double time, const double dTime);
     void render();
 
-    [[nodiscard]] inline const glm::fvec3 &getPosition() const noexcept { return position; }
+    [[nodiscard]] constexpr const glm::fvec3 &getPosition() const noexcept { return position; }
 
-    [[nodiscard]] inline const glm::fvec3 &getDirection() const noexcept { return direction; }
+    [[nodiscard]] constexpr const glm::fvec3 &getDirection() const noexcept { return direction; }
 
-    [[nodiscard]] inline glm::fvec3 getEyePosition() const noexcept {
+    [[nodiscard]] constexpr glm::fvec3 getEyePosition() const noexcept {
         return position + glm::fvec3(-(walking > 0)*glm::sin(walking * PI2) * 0.025 * direction.z,
                                      bbox.y - 0.1 + (walking > 0)*glm::abs(glm::sin(walking * PI2))* 0.05,
                                      (walking > 0)*glm::sin(walking * PI2)* 0.025 * direction.x);
